@@ -61,8 +61,8 @@ class Mount {
 
     // returns true if the mount is at the home (startup) position
     inline bool isHome() {
-      return abs(axis1.getInstrumentCoordinate() - home.position.a1) <= arcsecToRad(AXIS1_TARGET_TOLERANCE) &&
-             abs(axis2.getInstrumentCoordinate() - home.position.a2) <= arcsecToRad(AXIS2_TARGET_TOLERANCE);
+      return abs(axis1.getInstrumentCoordinate() - home.position.a1) <= arcsecToRad(AXIS1_HOME_TOLERANCE + 0.001F) &&
+             abs(axis2.getInstrumentCoordinate() - home.position.a2) <= arcsecToRad(AXIS2_HOME_TOLERANCE + 0.001F);
     }
 
     // returns true if the mount is slewing (doing a goto or guide > 2X)
@@ -81,11 +81,8 @@ class Mount {
     // returns true if the mount motors are powered on
     inline bool isEnabled() { return axis1.isEnabled() || axis2.isEnabled(); }
 
-    // allow syncing to the encoders instead of from them
-    void syncToEncoders(bool state);
-
-    // returns true if syncing only from OnStep to the Encoders
-    inline bool isSyncToEncoders() { return syncToEncodersEnabled; }
+    // true if syncing only from OnStep to the Encoders
+    bool syncFromOnStepToEncoders = false;
 
     // updates the tracking rates, etc. as appropriate for the mount state
     // called once a second by poll() but available here for immediate action
@@ -118,8 +115,6 @@ class Mount {
     Coordinate current;
 
     TrackingState trackingState = TS_NONE;
-
-    bool syncToEncodersEnabled = false;
 };
 
 #ifdef AXIS1_STEP_DIR_PRESENT

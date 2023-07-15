@@ -454,13 +454,6 @@ void Axis::poll() {
   // make sure we're ready
   if (axisNumber == 0) return;
 
-  // respond to the motor disabling itself
-  if (autoRate != AR_NONE && !motor->enabled) {
-    autoRate = AR_NONE;
-    freq = 0.0F;
-    V(axisPrefix); VLF("motion stopped, motor disabled!");
-  }
-
   // let the user know if the associated senses change state
   #if DEBUG == VERBOSE
     if (sense.changed(homeSenseHandle)) {
@@ -580,6 +573,13 @@ void Axis::poll() {
 
   // keep associated motor updated
   motor->poll();
+
+  // respond to the motor disabling itself
+  if (autoRate != AR_NONE && !motor->enabled) {
+    autoRate = AR_NONE;
+    freq = 0.0F;
+    V(axisPrefix); VLF("motion stopped, motor disabled!");
+  }
 }
 
 // set minimum slew frequency in "measures" (radians, microns, etc.) per second
@@ -677,14 +677,14 @@ bool Axis::motionError(Direction direction) {
 
   if (direction == DIR_FORWARD || direction == DIR_BOTH) {
     result = getInstrumentCoordinateSteps() > lroundf(0.9F*INT32_MAX) ||
-             (limitsCheck && getInstrumentCoordinate() > settings.limits.max) ||
+             (limitsCheck && homingStage == HOME_NONE && getInstrumentCoordinate() > settings.limits.max) ||
              (!commonMinMaxSense && errors.maxLimitSensed);
     if (result == true && result != lastErrorResult) { V(axisPrefix); VLF("motion error forward limit"); }
   } else
 
   if (direction == DIR_REVERSE || direction == DIR_BOTH) {
     result = getInstrumentCoordinateSteps() < lroundf(0.9F*INT32_MIN) ||
-             (limitsCheck && getInstrumentCoordinate() < settings.limits.min) ||
+             (limitsCheck && homingStage == HOME_NONE && getInstrumentCoordinate() < settings.limits.min) ||
              (!commonMinMaxSense && errors.minLimitSensed);
     if (result == true && result != lastErrorResult) { V(axisPrefix); VLF("motion error reverse limit"); }
   }
