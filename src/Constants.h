@@ -32,7 +32,9 @@
 
 #define STM32Blue                   18     // Khalid and Dave's PCB for STM32 Blue pill (STM32F103CB and STM32F303CC)
 
-#define PINMAP_LAST                 18
+#define JTWSTM                      19     // JTW Astronomy PCB rev 2.1
+
+#define PINMAP_LAST                 19
 
 // WEATHER sensors (temperature, pressure, and humidity)
 #define WEATHER_FIRST               1
@@ -127,7 +129,11 @@
 // task manager
 #define TASKS_MAX                   48     // up to 48 tasks
 #define TASKS_SKIP_MISSED                  // just skip missed tasks if too late
-#define TASKS_HWTIMERS              3      // up to 3 hardware timers
+#ifdef ESP32
+  #define TASKS_HWTIMERS             4     // up to 4 hardware timers
+#else
+  #define TASKS_HWTIMERS             3
+#endif
 
 // default start of axis class hardware timers
 #define AXIS_HARDWARE_TIMER_BASE    2      // in the OnStepX timer#1 is the sidereal clock

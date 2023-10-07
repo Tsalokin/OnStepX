@@ -55,7 +55,7 @@ CommandError Park::set() {
   if (state == PS_PARKED)      return CE_PARKED;
   if (goTo.state != GS_NONE)   return CE_SLEW_IN_MOTION;
   if (guide.state != GU_NONE)  return CE_SLEW_IN_MOTION;
-  if (mount.isFault())         return CE_SLEW_ERR_HARDWARE_FAULT;
+  if (mount.motorFault())      return CE_SLEW_ERR_HARDWARE_FAULT;
 
   VLF("MSG: Mount, setting park position");
 
@@ -95,9 +95,9 @@ CommandError Park::request() {
     if (state == PS_PARKING)     return CE_PARK_FAILED;
     if (state == PS_PARK_FAILED) return CE_PARK_FAILED;
     if (!mount.isEnabled())      return CE_SLEW_ERR_IN_STANDBY;
-    if (mount.isFault())         return CE_SLEW_ERR_HARDWARE_FAULT;
     if (goTo.state != GS_NONE)   return CE_SLEW_IN_MOTION;
     if (guide.state != GU_NONE)  return CE_SLEW_IN_MOTION;
+    if (mount.motorFault())      return CE_SLEW_ERR_HARDWARE_FAULT;
 
     CommandError e = goTo.validate();
     if (e != CE_NONE) return e;
@@ -202,20 +202,25 @@ void Park::requestDone() {
 
 // returns a parked telescope to operation
 CommandError Park::restore(bool withTrackingOn) {
-  if (!settings.saved)         return CE_NO_PARK_POSITION_SET;
+  if (!settings.saved) return CE_NO_PARK_POSITION_SET;
   if (state != PS_PARKED) {
     #if PARK_STRICT == ON
-      VLF("MSG: Unpark ignored, not parked");
+      VLF("MSG: Mount, unpark ignored not parked");
       return CE_NOT_PARKED;
+    #else
+      if (!mount.isHome()) {
+        VLF("MSG: Mount, unpark when not parked allowed at home only");
+        return CE_NOT_PARKED;
+      }
     #endif
-    if (!mount.isHome())       return CE_NOT_PARKED;
   }
-  if (goTo.state != GS_NONE)   return CE_SLEW_IN_MOTION;
-  if (guide.state != GU_NONE)  return CE_SLEW_IN_MOTION;
-  if (mount.isFault())         return CE_SLEW_ERR_HARDWARE_FAULT;
-  if (!site.isDateTimeReady()) return CE_PARKED;
+  if (!site.isDateTimeReady()) {
+    VLF("MSG: Mount, unpark postponed no date/time");
+    return CE_PARKED;
+  }
+  if (mount.motorFault()) return CE_SLEW_ERR_HARDWARE_FAULT;
 
-  VLF("MSG: Unparking");
+  VF("MSG: Mount, unparking "); if (withTrackingOn) { VLF("with tracking sidereal"); } else { VLF("with tracking disabled"); } 
 
   #if AXIS1_PEC == ON
     wormSenseSteps = settings.wormSensePositionSteps;

@@ -82,7 +82,7 @@ CommandError Goto::request(Coordinate coords, PierSideSelect pierSideSelect, boo
   }
 
   CommandError e = setTarget(&coords, pierSideSelect);
-  if (e == CE_SLEW_IN_SLEW) { stop(); return e; }
+  if (e == CE_SLEW_IN_SLEW) { abort(); return e; }
   if (e != CE_NONE) return e;
 
   lastAlignTarget = target;
@@ -135,10 +135,13 @@ CommandError Goto::request(Coordinate coords, PierSideSelect pierSideSelect, boo
   taskHandle = tasks.add(0, 0, true, 3, gotoWrapper, "MntGoto");
   if (taskHandle) {
     VLF("MSG: Mount, create goto monitor task (idle, priority 3)... success");
-    VLF("MSG: Mount, starting goto");
+    VLF("MSG: Mount, attempting goto");
 
     e = startAutoSlew();
-    if (e != CE_NONE) return e;
+    if (e != CE_NONE) {
+      VLF("MSG: Mount, goto failed");
+      return e;
+    }
 
     tasks.setPeriodMicros(taskHandle, FRACTIONAL_SEC_US);
     VF("MSG: Mount, goto monitor task set rate "); V(FRACTIONAL_SEC_US); VL("us");
@@ -210,6 +213,7 @@ CommandError Goto::setTarget(Coordinate *coords, PierSideSelect pierSideSelect, 
   if (e != CE_NONE) return e;
 
   target = *coords;
+  azimuthTargetCorrection = 0.0;
 
   if (transform.mountType == ALTAZM) transform.horToEqu(&target); else transform.equToHor(&target);
 
@@ -295,6 +299,31 @@ CommandError Goto::setTarget(Coordinate *coords, PierSideSelect pierSideSelect, 
     if (pierSideSelect == PSS_WEST_ONLY && target.pierSide != PIER_SIDE_WEST) return CE_SLEW_ERR_OUTSIDE_LIMITS; else
     if (pierSideSelect == PSS_SAME_ONLY && target.pierSide != current.pierSide) return CE_SLEW_ERR_OUTSIDE_LIMITS;
   } else {
+    if (MOUNT_TYPE == ALTAZM) {
+      // adjust coordinate range to allow going past +/-180 degrees
+      if (current.z >= 0) {
+        VLF("MSG: Mount, current azimuth >= 0");
+        if (target.z < 0) {
+          VLF("MSG: Mount, target azimuth < 0");
+          double z1 = target.z + Deg360;
+          if ((z1 < axis1.settings.limits.max) && (dist(current.z, target.z) > dist(current.z, z1))) {
+            VF("MSG: Mount, target changed from "); V(radToDeg(target.z)); VF(" to "); VL(radToDeg(z1));
+            azimuthTargetCorrection = Deg360;
+          }
+        }
+      } else
+      if (current.z < 0) {
+        VLF("MSG: Mount, current azimuth < 0");
+        if (target.z > 0) {
+          VLF("MSG: Mount, target azimuth > 0");
+          double z1 = target.z - Deg360;
+          if ((z1 > axis1.settings.limits.min) && (dist(current.z, target.z) > dist(current.z, z1))) {
+            VF("MSG: Mount, target changed from "); V(radToDeg(target.z)); VF(" to "); VL(radToDeg(z1));
+            azimuthTargetCorrection = -Deg360;
+          }
+        }
+      }
+    }
     target.pierSide = PIER_SIDE_EAST;
   }
 
@@ -308,14 +337,12 @@ CommandError Goto::setTarget(Coordinate *coords, PierSideSelect pierSideSelect, 
 }
 
 // stop any presently active goto
-void Goto::stop() {
+void Goto::abort() {
   if (state == GS_GOTO && stage > GG_READY_ABORT) stage = GG_READY_ABORT;
 }
 
 // general status checks ahead of sync or goto
 CommandError Goto::validate() {
-  if (axis1.fault())           return CE_SLEW_ERR_HARDWARE_FAULT;
-  if (axis2.fault())           return CE_SLEW_ERR_HARDWARE_FAULT;
   if (!axis1.isEnabled())      return CE_SLEW_ERR_IN_STANDBY;
   if (!axis2.isEnabled())      return CE_SLEW_ERR_IN_STANDBY;
   if (park.state == PS_PARKED) return CE_SLEW_ERR_IN_PARK;
@@ -323,6 +350,7 @@ CommandError Goto::validate() {
   if (guide.state != GU_NONE)  return CE_SLEW_IN_MOTION;
   if (mount.isSlewing())       return CE_SLEW_IN_MOTION;
   if (limits.isGotoError())    return CE_SLEW_ERR_OUTSIDE_LIMITS;
+  if (mount.motorFault())      return CE_SLEW_ERR_HARDWARE_FAULT;
   return CE_NONE;
 }
 
@@ -529,8 +557,10 @@ void Goto::poll() {
         nearTarget.d -= slewDestinationDistDec;
 
         if (transform.mountType == ALTAZM) transform.equToHor(&nearTarget);
+
         double a1, a2;
         transform.mountToInstrument(&nearTarget, &a1, &a2);
+        if (MOUNT_TYPE == ALTAZM) a1 += azimuthTargetCorrection;
 
         axis1.setTargetCoordinate(a1);
         axis2.setTargetCoordinate(a2);
@@ -553,6 +583,7 @@ CommandError Goto::startAutoSlew() {
 
   double a1, a2;
   transform.mountToInstrument(&destination, &a1, &a2);
+  if (MOUNT_TYPE == ALTAZM) a1 += azimuthTargetCorrection;
 
   if (stage == GG_DESTINATION && park.state == PS_PARKING) {
     axis1.setTargetCoordinatePark(a1);
