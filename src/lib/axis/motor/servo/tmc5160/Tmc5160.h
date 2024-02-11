@@ -59,7 +59,6 @@ class ServoTmc5160 : public ServoDriver {
     const ServoTmcSettings *Settings;
 
   private:
-    inline float mAToCs(float mA) { return 32.0F*(((mA/1000.0F)*(rSense+0.02F))/0.325F) - 1.0F; }
     float rSense = 0.075F;
 
     bool stealthChop() { 
@@ -67,12 +66,9 @@ class ServoTmc5160 : public ServoDriver {
          (axisNumber == 2 && AXIS2_DRIVER_DECAY == AXIS2_DRIVER_DECAY_GOTO && AXIS2_DRIVER_DECAY == STEALTHCHOP)) return true; else return false;
     }
 
-    #if SERIAL_TMC == SoftSerial
-      SoftwareSerial SerialTMC;
-    #endif
-
     TMC5160Stepper *driver;
 
+    int16_t currentRms;
     bool powered = false;
     float currentVelocity = 0.0F;
     float acceleration;

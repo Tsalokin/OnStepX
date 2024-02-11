@@ -78,10 +78,25 @@
   #define MCU_STR "STM32F411"
   #include "HAL_STM32F4x1.h"
 
+#elif defined(STM32F407xx)
+  // BTT SKR PRO board with STM32F407
+  #define MCU_STR "STM32F407"
+  #include "HAL_STM32F407.h"
+
 #elif defined(STM32F446xx)
   // FYSETC S6 board with STM32F446
   #define MCU_STR "STM32F446"
   #include "HAL_STM32F446.h"
+
+#elif defined(STM32H743xx)
+  // WeAct Studio board with STM32H743
+  #define MCU_STR "STM32H743"
+  #include "HAL_STM32H7xx.h"
+
+#elif defined(STM32H750xx)
+  // WeAct Studio board with STM32H750
+  #define MCU_STR "STM32H750"
+  #include "HAL_STM32H7xx.h"
 
 #elif defined(ESP32)
   // ESP32
@@ -92,7 +107,12 @@
   // Arduino Due
   #define MCU_STR "SAM3X8E (Arduino DUE)"
   #include "HAL_Due.h"  
-  
+
+#elif defined(ARDUINO_UNOWIFIR4)
+  // Arduino UNO R4 WIFI
+  #define MCU_STR "RENESAS RA4M1 (Arduino UNO R4 WIFI)"
+  #include "HAL_UNO_R4_WIFI.h"  
+
 #else
   // Generic
   #warning "Unknown Platform! If this is a new platform, it would probably do best with a new HAL designed for it."

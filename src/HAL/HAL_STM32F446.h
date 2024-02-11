@@ -4,11 +4,6 @@
 // We define a more generic symbol, in case more STM32 boards based on different lines are supported
 #define __ARM_STM32__
 
-#define HAL_FAST_PROCESSOR
-
-#define HAL_FRACTIONAL_SEC 500.0F
-// Base rate for critical task timing
-
 // Analog read and write
 #ifndef ANALOG_READ_RANGE
   #define ANALOG_READ_RANGE 1023
@@ -20,7 +15,11 @@
   #define ANALOG_WRITE_PWM_BITS 8 // up to 16 bits
 #endif
 
+// Base rate for critical task timing
+#define HAL_FRACTIONAL_SEC 300.0F
+
 // Lower limit (fastest) step rate in uS for this platform (in SQW mode) and width of step pulse
+#define HAL_FAST_PROCESSOR
 #define HAL_MAXRATE_LOWER_LIMIT 14   // assumes optimization set to Fastest (-O3)
 #define HAL_PULSE_WIDTH         250  // in ns, estimated
 

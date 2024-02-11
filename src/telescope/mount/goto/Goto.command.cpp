@@ -12,6 +12,7 @@
 #include "../guide/Guide.h"
 #include "../home/Home.h"
 #include "../limits/Limits.h"
+#include "../status/Status.h"
 
 bool Goto::command(char *reply, char *command, char *parameter, bool *supressFrame, bool *numericReply, CommandError *commandError) {
   PrecisionMode precisionMode = PM_HIGH;
@@ -28,7 +29,8 @@ bool Goto::command(char *reply, char *command, char *parameter, bool *supressFra
     // :A?#       Align status
     //            Returns: mno#
     //            where m is the maximum number of alignment stars
-    //                  n is the current alignment star (0 otherwise)
+    //                  n is the current alignment star (0 otherwise) note: this is always 1 greater than the number
+    //                    of alignment stars accepted and so can range from '0' to ':' (':' = '0' + 10)
     //                  o is the last required alignment star when an alignment is in progress (0 otherwise)
     if (command[1] == '?' && parameter[0] == 0) {
       reply[0] = '0' + ALIGN_MAX_NUM_STARS;
@@ -88,19 +90,24 @@ bool Goto::command(char *reply, char *command, char *parameter, bool *supressFra
   //            Returns: "N/A#" on success, "En#" on failure where n is the error code per the :MS# command
   if (command[0] == 'C' && (command[1] == 'S' || command[1] == 'M') && parameter[0] == 0) {
     CommandError e;
+
     if (alignActive()) {
-      e = alignAddStar();
+      e = alignAddStar(true);
       if (e != CE_NONE) {
-          alignState.lastStar = 0;
-          alignState.currentStar = 0;
-          *commandError = e;
-          DLF("ERR: Mount, failed to add align point");
-        } else { VLF("MSG: Mount, align point added"); }
-      } else {
+        alignState.lastStar = 0;
+        alignState.currentStar = 0;
+        *commandError = e;
+        DLF("ERR: Mount, failed to add align point");
+      } else { VLF("MSG: Mount, align point added"); }
+    } else {
+      Coordinate before = mount.getMountPosition(CR_MOUNT);
       PierSideSelect pps = settings.preferredPierSide;
       if (!mount.isHome() && PIER_SIDE_SYNC_CHANGE_SIDES == OFF) pps = PSS_SAME_ONLY;
       e = requestSync(gotoTarget, pps);
+      Coordinate after = mount.getMountPosition(CR_MOUNT);
+      if (before.pierSide != PIER_SIDE_NONE && before.pierSide != after.pierSide) mountStatus.soundAlert();
     }
+
     if (command[1] == 'M') {
       if (e >= CE_SLEW_ERR_BELOW_HORIZON && e <= CE_SLEW_ERR_UNSPECIFIED) strcpy(reply,"E0");
       reply[1] = (char)(e - CE_SLEW_ERR_BELOW_HORIZON) + '1';
@@ -200,19 +207,21 @@ bool Goto::command(char *reply, char *command, char *parameter, bool *supressFra
       // :GX9[n]#   Get setting [n]
       //            Returns: Value
       if (parameter[0] == '9')  {
-        Coordinate current;
         switch (parameter[1]) {
-          case '2': sprintF(reply, "%0.3f", settings.usPerStepCurrent); break;              // current
-          case '3': sprintF(reply, "%0.3f", usPerStepBase); break;                          // default base
+          // current rate in us/step
+          case '2': sprintF(reply, "%0.3f", settings.usPerStepCurrent); break;
+          // default base rate in us/step
+          case '3': sprintF(reply, "%0.3f", usPerStepBase); break;
           // pierSide 0 = None, 1 = East, 2 = West (with suffix 'N' if meridian flips are disabled)
-          case '4':
-              current = mount.getMountPosition();
-              sprintf(reply, "%d%s", (int)current.pierSide, (!transform.meridianFlips)?" N":"");
-          break;
-          case '5': sprintf(reply, "%d", (int)settings.meridianFlipAuto); break;            // autoMeridianFlip
-          case '6': reply[0] = "EWB"[settings.preferredPierSide - 1]; reply[1] = 0; break;  // preferred pier side
+          case '4': sprintf(reply, "%d%s", (int)mount.getMountPosition().pierSide, (!transform.meridianFlips)?" N":""); break;
+          // autoMeridianFlip
+          case '5': sprintf(reply, "%d", (int)isAutoFlipEnabled()); break;
+          // preferred pier side
+          case '6': reply[0] = transform.meridianFlips ? "EWB"[settings.preferredPierSide - 1] : 'E'; reply[1] = 0; break;
+          // current step rate in deg/s
           case '7': sprintF(reply, "%0.1f", (1000000.0F/settings.usPerStepCurrent)/degToRadF(axis1.getStepsPerMeasure())); break;
-          case '9': sprintF(reply, "%0.3f",usPerStepLowerLimit()); break;                   // fastest step rate in us
+          // fastest step rate in us/step
+          case '9': sprintF(reply, "%0.3f",usPerStepLowerLimit()); break;
           default: return false;
         }
        *numericReply = false;
@@ -255,7 +264,7 @@ bool Goto::command(char *reply, char *command, char *parameter, bool *supressFra
     //  :MNw#  Goto current RA/Dec but West of the Pier (within meridian limit overlap)
     //         Returns: 0..9, see :MS#
     if (command[1] == 'N') {
-      if (transform.mountType != ALTAZM) {
+      if (transform.meridianFlips) {
         Coordinate newTarget = mount.getPosition();
         CommandError e = CE_NONE;
 
@@ -287,7 +296,7 @@ bool Goto::command(char *reply, char *command, char *parameter, bool *supressFra
       if (transform.mountType != ALTAZM) {
         Coordinate newTarget = mount.getPosition();
         CommandError e = validate();
-        if (e == CE_NONE) e = limits.validateTarget(&newTarget);
+        if (e == CE_NONE) e = limits.validateTarget(&newTarget, true);
         if (e == CE_NONE) {
           #if ALIGN_MAX_NUM_STARS > 1
             transform.align.model.altCor = 0.0;
@@ -469,49 +478,54 @@ bool Goto::command(char *reply, char *command, char *parameter, bool *supressFra
               updateAccelerationRates();
             } else *commandError = CE_SLEW_IN_MOTION;
           break;
+
           // autoMeridianFlip
           case '5':
-            if (transform.meridianFlips) {
+            if (transform.mountType != ALTAZM && transform.meridianFlips && GOTO_FEATURE != OFF) {
               if (parameter[3] == '0' || parameter[3] == '1') {
-                if (GOTO_FEATURE == OFF) parameter[3] = '0'; // disable autoflip
                 settings.meridianFlipAuto = parameter[3] - '0';
                 #if MFLIP_AUTOMATIC_MEMORY == ON
                   nv.updateBytes(NV_MOUNT_GOTO_BASE, &settings, sizeof(GotoSettings));
                 #endif
               } else *commandError = CE_PARAM_RANGE;
-            }
+            } else *commandError = CE_CMD_UNKNOWN;
           break;
           // preferred pier side
           case '6':
-            switch (parameter[3]) {
-              case 'E': settings.preferredPierSide = PSS_EAST; break;
-              case 'W': settings.preferredPierSide = PSS_WEST; break;
-              case 'B': settings.preferredPierSide = PSS_BEST; break;
-              default: *commandError = CE_PARAM_RANGE;
-            }
-            #if PIER_SIDE_PREFERRED_MEMORY == ON
-              nv.updateBytes(NV_MOUNT_GOTO_BASE, &settings, sizeof(GotoSettings));
-            #endif
+            if (transform.meridianFlips && GOTO_FEATURE != OFF) {
+              switch (parameter[3]) {
+                case 'E': settings.preferredPierSide = PSS_EAST; break;
+                case 'W': settings.preferredPierSide = PSS_WEST; break;
+                case 'B': settings.preferredPierSide = PSS_BEST; break;
+                default: *commandError = CE_PARAM_RANGE;
+              }
+              #if PIER_SIDE_PREFERRED_MEMORY == ON
+                nv.updateBytes(NV_MOUNT_GOTO_BASE, &settings, sizeof(GotoSettings));
+              #endif
+            } else *commandError = CE_CMD_UNKNOWN;
           break;
-
           // pause at home on meridian flip
           case '8':
-            if (parameter[3] == '0' || parameter[3] == '1') {
-              #if GOTO_FEATURE == ON
-                settings.meridianFlipPause = parameter[3] - '0';
-                #if MFLIP_PAUSE_HOME_MEMORY == ON
-                  nv.updateBytes(NV_MOUNT_GOTO_BASE, &settings, sizeof(GotoSettings));
-                #endif
-             #endif
-            } else *commandError = CE_PARAM_RANGE;
+            if (transform.meridianFlips && GOTO_FEATURE != OFF) {
+              if (parameter[3] == '0' || parameter[3] == '1') {
+                #if GOTO_FEATURE == ON
+                  settings.meridianFlipPause = parameter[3] - '0';
+                  #if MFLIP_PAUSE_HOME_MEMORY == ON
+                    nv.updateBytes(NV_MOUNT_GOTO_BASE, &settings, sizeof(GotoSettings));
+                  #endif
+              #endif
+              } else *commandError = CE_PARAM_RANGE;
+            } else *commandError = CE_CMD_UNKNOWN;
           break;
           // continue if paused at home
           case '9':
-            if (parameter[3] == '1') {
-              #if GOTO_FEATURE == ON
-                if (meridianFlipHome.paused) meridianFlipHome.resume = true;
-              #endif
-            } else *commandError = CE_PARAM_RANGE;
+            if (transform.meridianFlips && GOTO_FEATURE != OFF) {
+              if (parameter[3] == '1') {
+                #if GOTO_FEATURE == ON
+                  if (meridianFlipHome.paused) meridianFlipHome.resume = true;
+                #endif
+              } else *commandError = CE_PARAM_RANGE;
+            } else *commandError = CE_CMD_UNKNOWN;
           break;
           default: return false;
         }

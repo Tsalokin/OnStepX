@@ -171,20 +171,34 @@
   #error "Configuration (Config.h): Setting AXIS1_POWER_DOWN unknown, use OFF or ON."
 #endif
 
-#if AXIS1_LIMIT_MIN < -360 || AXIS1_LIMIT_MIN > -90
-  #error "Configuration (Config.h): Setting AXIS1_LIMIT_MIN unknown, use value in the range -90 to -360."
+#if AXIS1_SECTOR_GEAR != ON && AXIS1_SECTOR_GEAR != OFF
+  #error "Configuration (Config.h): Setting AXIS1_SECTOR_GEAR unknown, use OFF or ON."
 #endif
 
-#if AXIS1_LIMIT_MAX < 90 || AXIS1_LIMIT_MAX > 360
-  #error "Configuration (Config.h): Setting AXIS1_LIMIT_MAX unknown, use value in the range 90 to 360."
+#if AXIS1_SECTOR_GEAR == ON
+  #if MOUNT_SUBTYPE == ALTAZM
+    #error "Configuration (Config.h): Setting MOUNT_TYPE ALTAZM is not compatible with AXIS1_SECTOR_GEAR ON  (from Constants.h)"
+  #endif
+  #if (AXIS1_SENSE_HOME) != OFF && (AXIS1_SENSE_HOME_OFFSET) != 0
+    #error "Configuration (Config.h): Enabling AXIS1_SECTOR_GEAR and AXIS1_SENSE_HOME requires an AXIS1_SENSE_HOME_OFFSET of 0."
+  #endif
+  #if (AXIS2_SENSE_HOME) != OFF && AXIS2_TANGENT_ARM == OFF
+    #error "Configuration (Config.h): Enabling AXIS1_SECTOR_GEAR requires AXIS2_SENSE_HOME to be OFF (except for tangent arm Dec mounts.)"
+  #endif
+#else
+  #if (AXIS1_SENSE_HOME) == OFF && (AXIS2_SENSE_HOME) != OFF
+    #error "Configuration (Config.h): Enabling AXIS2_SENSE_HOME requires enabling AXIS1_SENSE_HOME or AXIS2_TANGENT_ARM."
+  #endif
+  #if AXIS1_LIMIT_MIN < -360 || AXIS1_LIMIT_MIN > -90
+    #error "Configuration (Config.h): Setting AXIS1_LIMIT_MIN unknown, use value in the range -90 to -360."
+  #endif
+  #if AXIS1_LIMIT_MAX < 90 || AXIS1_LIMIT_MAX > 360
+    #error "Configuration (Config.h): Setting AXIS1_LIMIT_MAX unknown, use value in the range 90 to 360."
+  #endif
 #endif
 
 #if (AXIS1_SENSE_HOME) != OFF && (AXIS1_SENSE_HOME) < 0
   #error "Configuration (Config.h): Setting AXIS1_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
-#endif
-
-#if (AXIS1_SENSE_HOME) != OFF && (AXIS2_SENSE_HOME) == OFF
-  #error "Configuration (Config.h): Enabling AXIS1_SENSE_HOME requires enabling AXIS2_SENSE_HOME also."
 #endif
 
 #if (AXIS1_SENSE_LIMIT_MIN) != OFF && (AXIS1_SENSE_LIMIT_MIN) < 0
@@ -282,25 +296,52 @@
   #error "Configuration (Config.h): Setting AXIS2_SENSE_LIMIT_MAX unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
 
+#if MOUNT_SUBTYPE < GEM || MOUNT_SUBTYPE > ALTAZM
+  #error "Configuration (Config.h): Setting MOUNT_TYPE unknown, use a valid MOUNT TYPE (from Constants.h)"
+#endif
+
 #if AXIS2_TANGENT_ARM != ON && AXIS2_TANGENT_ARM != OFF
   #error "Configuration (Config.h): Setting AXIS2_TANGENT_ARM unknown, use OFF or ON."
+#endif
+
+#if AXIS2_TANGENT_ARM == ON
+  #if MOUNT_SUBTYPE == ALTAZM
+    #error "Configuration (Config.h): Setting MOUNT_TYPE ALTAZM is not compatible with AXIS2_TANGENT_ARM ON  (from Constants.h)"
+  #endif
+  #if (AXIS2_SENSE_HOME) != OFF && (AXIS2_SENSE_HOME_OFFSET) != 0
+    #error "Configuration (Config.h): Enabling AXIS2_TANGENT_ARM and AXIS2_SENSE_HOME requires an AXIS2_SENSE_HOME_OFFSET of 0."
+  #endif
+  #if (AXIS1_SENSE_HOME) != OFF && AXIS1_SECTOR_GEAR == OFF
+    #error "Configuration (Config.h): Enabling AXIS2_TANGENT_ARM requires AXIS1_SENSE_HOME to be OFF (except for sector gear RA mounts.)"
+  #endif
+#else
+  #if (AXIS2_SENSE_HOME) != OFF && (AXIS1_SENSE_HOME) == OFF
+    #error "Configuration (Config.h): Enabling AXIS2_SENSE_HOME requires enabling AXIS1_SENSE_HOME or AXIS2_TANGENT_ARM."
+  #endif
 #endif
 
 #if AXIS2_TANGENT_ARM_CORRECTION != ON && AXIS2_TANGENT_ARM_CORRECTION != OFF
   #error "Configuration (Config.h): Setting AXIS2_TANGENT_ARM_CORRECTION unknown, use OFF or ON."
 #endif
 
-#if AXIS2_TANGENT_ARM == OFF && (AXIS2_SENSE_HOME) != OFF && (AXIS1_SENSE_HOME) == OFF
-  #error "Configuration (Config.h): Enabling AXIS2_SENSE_HOME requires enabling AXIS1_SENSE_HOME or AXIS2_TANGENT_ARM."
-#endif
-
-// MOUNT TYPE
-#if MOUNT_SUBTYPE < GEM || MOUNT_SUBTYPE > ALTAZM
-  #error "Configuration (Config.h): Setting MOUNT_TYPE unknown, use a valid MOUNT TYPE (from Constants.h)"
+#if MOUNT_ALTERNATE_ORIENTATION != OFF && MOUNT_ALTERNATE_ORIENTATION != ON
+  #error "Configuration (Config.h): Setting MOUNT_ALTERNATE_ORIENTATION unknown, use ON or OFF"
 #endif
 
 #if MOUNT_COORDS < MOUNT_COORDS_FIRST && MOUNT_COORDS > MOUNT_COORDS_LAST
   #error "Configuration (Config.h): Setting MOUNT_COORDS unknown, use a valid MOUNT COORDS (from Constants.h)"
+#endif
+
+#if MOUNT_COORDS_MEMORY != ON && MOUNT_COORDS_MEMORY != OFF
+  #error "Configuration (Config.h): Setting MOUNT_COORDS_MEMORY unknown, use ON or OFF"
+#endif
+
+#if MOUNT_COORDS_MEMORY == ON && NV_ENDURANCE < NVE_VHIGH
+  #error "Configuration (Config.h): Setting MOUNT_COORDS_MEMORY requires a NV storage device with very high write endurance (FRAM)"
+#endif
+
+#if MOUNT_ENABLE_IN_STANDBY != ON && MOUNT_ENABLE_IN_STANDBY != OFF
+  #error "Configuration (Config.h): Setting MOUNT_ENABLE_IN_STANDBY unknown, use ON or OFF"
 #endif
 
 #if ALIGN_MAX_STARS != AUTO && (ALIGN_MAX_STARS < 1 && ALIGN_MAX_STARS > 9)
@@ -312,10 +353,10 @@
   #error "Configuration (Config.h): Setting TIME_LOCATION_SOURCE unknown, use OFF or valid TIME LOCATION SOURCE (from Constants.h)"
 #endif
 
-#if TIME_LOCATION_PPS_SENSE != OFF && \
-    TIME_LOCATION_PPS_SENSE != LOW && \
-    TIME_LOCATION_PPS_SENSE != HIGH && \
-    TIME_LOCATION_PPS_SENSE != BOTH
+#if (TIME_LOCATION_PPS_SENSE) != OFF && \
+    (TIME_LOCATION_PPS_SENSE) != LOW && \
+    (TIME_LOCATION_PPS_SENSE) != HIGH && \
+    (TIME_LOCATION_PPS_SENSE) != BOTH
   #error "Configuration (Config.h): Setting TIME_LOCATION_PPS_SENSE unknown, use OFF or LOW or HIGH or BOTH."
 #endif
 
@@ -557,8 +598,8 @@
   #error "Configuration (Config.h): Setting AXIS4_SLEW_RATE_MINIMUM out of range, use a value between 5 and 200"
 #endif
 
-#if AXIS4_SLEW_RATE_BASE_DESIRED < 200 || AXIS4_SLEW_RATE_BASE_DESIRED > 5000
-  #error "Configuration (Config.h): Setting AXIS4_SLEW_RATE_BASE_DESIRED out of range, use a value between 200 and 5000"
+#if AXIS4_SLEW_RATE_BASE_DESIRED < 100 || AXIS4_SLEW_RATE_BASE_DESIRED > 5000
+  #error "Configuration (Config.h): Setting AXIS4_SLEW_RATE_BASE_DESIRED out of range, use a value between 100 and 5000"
 #endif
 
 #if AXIS4_DRIVER_STATUS != OFF && AXIS4_DRIVER_STATUS != ON && AXIS4_DRIVER_STATUS != HIGH && AXIS4_DRIVER_STATUS != LOW
@@ -585,11 +626,11 @@
   #error "Configuration (Config.h): Setting AXIS4_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
 
-#if AXIS4_SENSE_LIMIT_MIN != OFF && AXIS4_SENSE_LIMIT_MIN < 0
+#if (AXIS4_SENSE_LIMIT_MIN) != OFF && (AXIS4_SENSE_LIMIT_MIN) < 0
   #error "Configuration (Config.h): Setting AXIS4_SENSE_LIMIT_MIN unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
 
-#if AXIS4_SENSE_LIMIT_MAX != OFF && AXIS4_SENSE_LIMIT_MAX < 0
+#if (AXIS4_SENSE_LIMIT_MAX) != OFF && (AXIS4_SENSE_LIMIT_MAX) < 0
   #error "Configuration (Config.h): Setting AXIS4_SENSE_LIMIT_MAX unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
 

@@ -46,7 +46,6 @@ bool WifiManager::init() {
     IPAddress sta_ip = IPAddress(sta->ip);
     IPAddress sta_gw = IPAddress(sta->gw);
     IPAddress sta_sn = IPAddress(sta->sn);
-    IPAddress target = IPAddress(sta->target);
 
     VF("MSG: WiFi, Sta Enable  = "); VL(settings.stationEnabled);
 
@@ -58,6 +57,7 @@ bool WifiManager::init() {
       VF("MSG: WiFi, Sta IP      = "); VL(sta_ip.toString());
       VF("MSG: WiFi, Sta GATEWAY = "); VL(sta_gw.toString());
       VF("MSG: WiFi, Sta SN      = "); VL(sta_sn.toString());
+      IPAddress target = IPAddress(sta->target);
       VF("MSG: WiFi, Sta TARGET  = "); VL(target.toString());
     }
 
@@ -119,6 +119,10 @@ bool WifiManager::init() {
     } else {
       active = true;
       VLF("MSG: WiFi, initialized");
+
+      #if MDNS_SERVER == ON && !defined(ESP8266)
+        if (MDNS.begin(MDNS_NAME)) { VLF("MSG: WiFi, mDNS started"); } else { VLF("WRN: WiFi, mDNS start failed!"); }
+      #endif
 
       #if STA_AUTO_RECONNECT == true
         if (settings.stationEnabled) {

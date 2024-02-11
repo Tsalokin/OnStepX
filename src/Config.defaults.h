@@ -76,6 +76,13 @@
 #define STA_ENABLED true
 #endif
 
+#ifndef MDNS_SERVER
+#define MDNS_SERVER                  ON                           // mDNS enabled
+#endif
+#ifndef MDNS_NAME
+#define MDNS_NAME                    "onstepx"                    // mDNS device name
+#endif
+
 #ifndef AP_SSID
 #define AP_SSID                       "OnStepX"                   // Wifi Access Point SSID
 #endif
@@ -198,6 +205,9 @@
 #ifndef AXIS1_SENSE_HOME_INIT
 #define AXIS1_SENSE_HOME_INIT         INPUT_PULLUP                // pin mode for home sensing
 #endif
+#ifndef AXIS1_SENSE_HOME_OFFSET
+#define AXIS1_SENSE_HOME_OFFSET       0                           // default offset in arc-seconds to home from the sense position
+#endif
 #ifndef AXIS1_SENSE_HOME_DIST_LIMIT
 #define AXIS1_SENSE_HOME_DIST_LIMIT   180.0                       // max distance in degrees
 #endif
@@ -212,6 +222,7 @@
 #endif
 #if AXIS1_DRIVER_MODEL >= STEP_DIR_DRIVER_FIRST && AXIS1_DRIVER_MODEL <= STEP_DIR_DRIVER_LAST
   #define AXIS1_STEP_DIR_PRESENT
+
   #if AXIS1_DRIVER_MODEL >= TMC_DRIVER_FIRST
     #if AXIS1_DRIVER_MODEL >= TMC_UART_DRIVER_FIRST 
       #define AXIS1_STEP_DIR_TMC_UART
@@ -256,15 +267,10 @@
   #define AXIS1_DRIVER_STATUS           OFF                       // driver status reporting (ON for TMC SPI or HIGH/LOW for fault pin)
   #endif
 #endif
+
 #if AXIS1_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS1_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS1_SERVO_PRESENT
-  #if AXIS1_DRIVER_MODEL == SERVO_TMC5160
-    #define AXIS1_SERVO_TMC5160
-  #elif AXIS1_DRIVER_MODEL == SERVO_TMC2209
-    #define AXIS1_SERVO_TMC2209
-  #else
-    #define AXIS1_SERVO_DC
-  #endif
+
   #ifndef AXIS1_SERVO_PH1_STATE
   #define AXIS1_SERVO_PH1_STATE         LOW                       // default (inactive) motor driver state, IN1 (SERVO_EE) or PHASE (SERVO_PE) pin
   #endif
@@ -272,17 +278,21 @@
   #define AXIS1_SERVO_PH2_STATE         LOW                       // default (inactive) motor driver state, IN2 or ENABLE (pwm) pin
   #endif
 
-  #ifndef AXIS1_SERVO_MAX_VELOCITY
-  #define AXIS1_SERVO_MAX_VELOCITY      100                       // max velocity, in % for DC, in steps/s for SERVO_TMC2209
+  #ifndef AXIS1_SERVO_VELOCITY_MAX
+  #define AXIS1_SERVO_VELOCITY_MAX      100                       // max velocity, in % for DC, in steps/s for SERVO_TMC2209
   #endif
   #ifndef AXIS1_SERVO_VELOCITY_FACTOR
   #define AXIS1_SERVO_VELOCITY_FACTOR   frequency*0               // converts frequency (counts per second) to velocity (in steps per second or DC motor PWM ADU range)
   #endif
   #ifndef AXIS1_SERVO_ACCELERATION
-  #define AXIS1_SERVO_ACCELERATION      20                        // acceleration, in %/s for DC, in steps/s/s for SERVO_TMC2209
+  #define AXIS1_SERVO_ACCELERATION      20                        // acceleration, in %/s
   #endif
   #ifndef AXIS1_SERVO_FEEDBACK
   #define AXIS1_SERVO_FEEDBACK          FB_PID                    // type of feedback: FB_PID
+  #endif
+
+  #ifndef AXIS1_SERVO_FLTR
+  #define AXIS1_SERVO_FLTR              OFF                       // servo encoder filter: OFF
   #endif
 
   #ifndef AXIS1_PID_P
@@ -363,6 +373,9 @@
 #ifndef AXIS2_SENSE_HOME_INIT
 #define AXIS2_SENSE_HOME_INIT         INPUT_PULLUP                // pin mode for home sensing
 #endif
+#ifndef AXIS2_SENSE_HOME_OFFSET
+#define AXIS2_SENSE_HOME_OFFSET       0                           // default offset in arc-seconds to home from the sense position
+#endif
 #ifndef AXIS2_SENSE_HOME_DIST_LIMIT
 #define AXIS2_SENSE_HOME_DIST_LIMIT   180.0                       // max distance in degrees
 #endif
@@ -421,15 +434,10 @@
   #define AXIS2_DRIVER_STATUS           OFF
   #endif
 #endif
+
 #if AXIS2_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS2_SERVO_PRESENT
-  #if AXIS2_DRIVER_MODEL == SERVO_TMC5160
-    #define AXIS2_SERVO_TMC5160
-  #elif AXIS2_DRIVER_MODEL == SERVO_TMC2209
-    #define AXIS2_SERVO_TMC2209
-  #else
-    #define AXIS2_SERVO_DC
-  #endif
+
   #ifndef AXIS2_SERVO_PH1_STATE
   #define AXIS2_SERVO_PH1_STATE         LOW
   #endif
@@ -437,8 +445,8 @@
   #define AXIS2_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS2_SERVO_MAX_VELOCITY
-  #define AXIS2_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS2_SERVO_VELOCITY_MAX
+  #define AXIS2_SERVO_VELOCITY_MAX      100
   #endif
   #ifndef AXIS2_SERVO_VELOCITY_FACTOR
   #define AXIS2_SERVO_VELOCITY_FACTOR   frequency*0
@@ -448,6 +456,10 @@
   #endif
   #ifndef AXIS2_SERVO_FEEDBACK
   #define AXIS2_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS2_SERVO_FLTR
+  #define AXIS2_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS2_PID_P
@@ -530,42 +542,56 @@
 #define MOUNT_SUBTYPE                 ALTAZM
 #define AXIS1_WRAP                    ON
 #endif
+
 #ifndef MOUNT_SUBTYPE
 #define MOUNT_SUBTYPE                 OFF
+#endif
+#ifndef MOUNT_ALTERNATE_ORIENTATION
+#define MOUNT_ALTERNATE_ORIENTATION   OFF                         // use ON or OFF, for FORK and ALTAZM mounts only
+#endif
+#ifndef MOUNT_COORDS
+#define MOUNT_COORDS                  TOPOCENTRIC                 // mount coordinate system
+#endif
+#ifndef MOUNT_COORDS_MEMORY
+#define MOUNT_COORDS_MEMORY           OFF                         // ON Enables mount position memory
 #endif
 #ifndef MOUNT_ENABLE_IN_STANDBY
 #define MOUNT_ENABLE_IN_STANDBY       OFF                         // ON Enables mount motor drivers in standby
 #endif
+#ifndef MOUNT_AUTO_HOME_DEFAULT
+#define MOUNT_AUTO_HOME_DEFAULT       OFF                         // ON default find home at boot
+#endif
+
 #ifndef AXIS1_TARGET_TOLERANCE
 #define AXIS1_TARGET_TOLERANCE        0.0F                        // in arc-seconds
 #endif
+#ifndef AXIS1_HOME_TOLERANCE                                      // in arc-seconds
+#define AXIS1_HOME_TOLERANCE          AXIS1_TARGET_TOLERANCE + (1800.0/AXIS1_STEPS_PER_DEGREE)
+#endif
+#ifndef AXIS1_SECTOR_GEAR
+#define AXIS1_SECTOR_GEAR             OFF                         // special case of a Sector Gear RA with limited travel
+#endif
+#ifndef AXIS1_WRAP
+#define AXIS1_WRAP                    OFF                         // allow unlimited motion about an Azimuth axis
+#endif
+
 #ifndef AXIS2_TARGET_TOLERANCE
 #define AXIS2_TARGET_TOLERANCE        0.0F                        // in arc-seconds
 #endif
-#ifndef AXIS1_HOME_TOLERANCE
-#define AXIS1_HOME_TOLERANCE          AXIS1_TARGET_TOLERANCE + (1800.0/AXIS1_STEPS_PER_DEGREE) // in arc-seconds
-#endif
-#ifndef AXIS2_HOME_TOLERANCE
-#define AXIS2_HOME_TOLERANCE          AXIS2_TARGET_TOLERANCE + (1800.0/AXIS2_STEPS_PER_DEGREE) // in arc-seconds
-#endif
-#ifndef AXIS1_WRAP
-#define AXIS1_WRAP                    OFF
+#ifndef AXIS2_HOME_TOLERANCE                                      // in arc-seconds
+#define AXIS2_HOME_TOLERANCE          AXIS2_TARGET_TOLERANCE + (1800.0/AXIS2_STEPS_PER_DEGREE)
 #endif
 #ifndef AXIS2_TANGENT_ARM
-#define AXIS2_TANGENT_ARM             OFF
+#define AXIS2_TANGENT_ARM             OFF                         // special case of a Tangent Arm Dec with limited travel
 #endif
 #ifndef AXIS2_TANGENT_ARM_CORRECTION
-#define AXIS2_TANGENT_ARM_CORRECTION  OFF
+#define AXIS2_TANGENT_ARM_CORRECTION  OFF                         // apply formula below to correct for Tangent Arm geometry
 #endif
 #ifndef TANGENT_ARM_INSTRUMENT_TO_MOUNT
 #define TANGENT_ARM_INSTRUMENT_TO_MOUNT(a) (atan(a))              // returns angle in radians
 #endif
 #ifndef TANGENT_ARM_MOUNT_TO_INSTRUMENT
 #define TANGENT_ARM_MOUNT_TO_INSTRUMENT(a) (tan(a))               // angle (a) in radians
-#endif
-
-#ifndef MOUNT_COORDS
-#define MOUNT_COORDS                  TOPOCENTRIC                 // mount coordinate system
 #endif
 
 // user feedback
@@ -579,7 +605,7 @@
 #define STATUS_MOUNT_LED              OFF
 #endif
 #ifndef MOUNT_LED_ON_STATE
-#define MOUNT_LED_ON_STATE     LOW
+#define MOUNT_LED_ON_STATE            LOW
 #endif
 #ifndef STATUS_BUZZER
 #define STATUS_BUZZER                 OFF
@@ -881,13 +907,10 @@
   #define AXIS3_DRIVER_STATUS           OFF
   #endif
 #endif
-#if AXIS3_DRIVER_MODEL >= SERVO_DRIVER_FIRST
+
+#if AXIS3_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS3_SERVO_PRESENT
-  #if AXIS3_DRIVER_MODEL == SERVO_TMC2209
-    #define AXIS3_SERVO_TMC2209
-  #else
-    #define AXIS3_SERVO_DC
-  #endif
+
   #ifndef AXIS3_SERVO_PH1_STATE
   #define AXIS3_SERVO_PH1_STATE         LOW
   #endif
@@ -895,14 +918,21 @@
   #define AXIS3_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS3_SERVO_MAX_VELOCITY
-  #define AXIS3_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS3_SERVO_VELOCITY_MAX
+  #define AXIS3_SERVO_VELOCITY_MAX      100
+  #endif
+  #ifndef AXIS3_SERVO_VELOCITY_FACTOR
+  #define AXIS3_SERVO_VELOCITY_FACTOR   frequency*0
   #endif
   #ifndef AXIS3_SERVO_ACCELERATION
   #define AXIS3_SERVO_ACCELERATION      20
   #endif
   #ifndef AXIS3_SERVO_FEEDBACK
   #define AXIS3_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS3_SERVO_FLTR
+  #define AXIS3_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS3_PID_P
@@ -1068,13 +1098,10 @@
   #define AXIS4_DRIVER_STATUS           OFF
   #endif
 #endif
-#if AXIS4_DRIVER_MODEL >= SERVO_DRIVER_FIRST
+
+#if AXIS4_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS4_SERVO_PRESENT
-  #if AXIS4_DRIVER_MODEL == SERVO_TMC2209
-    #define AXIS4_SERVO_TMC2209
-  #else
-    #define AXIS4_SERVO_DC
-  #endif
+
   #ifndef AXIS4_SERVO_PH1_STATE
   #define AXIS4_SERVO_PH1_STATE         LOW
   #endif
@@ -1082,14 +1109,21 @@
   #define AXIS4_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS4_SERVO_MAX_VELOCITY
-  #define AXIS4_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS4_SERVO_VELOCITY_MAX
+  #define AXIS4_SERVO_VELOCITY_MAX      100
+  #endif
+  #ifndef AXIS4_SERVO_VELOCITY_FACTOR
+  #define AXIS4_SERVO_VELOCITY_FACTOR   frequency*0
   #endif
   #ifndef AXIS4_SERVO_ACCELERATION
   #define AXIS4_SERVO_ACCELERATION      20
   #endif
   #ifndef AXIS4_SERVO_FEEDBACK
   #define AXIS4_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS4_SERVO_FLTR
+  #define AXIS4_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS4_PID_P
@@ -1232,11 +1266,10 @@
   #define AXIS5_DRIVER_STATUS           OFF
   #endif
 #endif
-#if AXIS5_DRIVER_MODEL >= SERVO_DRIVER_FIRST
+
+#if AXIS5_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS5_SERVO_PRESENT
-  #if AXIS5_DRIVER_MODEL == SERVO_PE || AXIS5_DRIVER_MODEL == SERVO_EE
-    #define AXIS5_SERVO_DC
-  #endif
+
   #ifndef AXIS5_SERVO_PH1_STATE
   #define AXIS5_SERVO_PH1_STATE         LOW
   #endif
@@ -1244,14 +1277,21 @@
   #define AXIS5_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS5_SERVO_MAX_VELOCITY
-  #define AXIS5_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS5_SERVO_VELOCITY_MAX
+  #define AXIS5_SERVO_VELOCITY_MAX      100
+  #endif
+  #ifndef AXIS5_SERVO_VELOCITY_FACTOR
+  #define AXIS5_SERVO_VELOCITY_FACTOR   frequency*0
   #endif
   #ifndef AXIS5_SERVO_ACCELERATION
   #define AXIS5_SERVO_ACCELERATION      20
   #endif
   #ifndef AXIS5_SERVO_FEEDBACK
   #define AXIS5_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS5_SERVO_FLTR
+  #define AXIS5_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS5_PID_P
@@ -1394,11 +1434,10 @@
   #define AXIS6_DRIVER_STATUS           OFF
   #endif
 #endif
-#if AXIS6_DRIVER_MODEL >= SERVO_DRIVER_FIRST
+
+#if AXIS6_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS6_SERVO_PRESENT
-  #if AXIS6_DRIVER_MODEL == SERVO_PE || AXIS6_DRIVER_MODEL == SERVO_EE
-    #define AXIS6_SERVO_DC
-  #endif
+
   #ifndef AXIS6_SERVO_PH1_STATE
   #define AXIS6_SERVO_PH1_STATE         LOW
   #endif
@@ -1406,14 +1445,21 @@
   #define AXIS6_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS6_SERVO_MAX_VELOCITY
-  #define AXIS6_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS6_SERVO_VELOCITY_MAX
+  #define AXIS6_SERVO_VELOCITY_MAX      100
+  #endif
+  #ifndef AXIS6_SERVO_VELOCITY_FACTOR
+  #define AXIS6_SERVO_VELOCITY_FACTOR   frequency*0
   #endif
   #ifndef AXIS6_SERVO_ACCELERATION
   #define AXIS6_SERVO_ACCELERATION      20
   #endif
   #ifndef AXIS6_SERVO_FEEDBACK
   #define AXIS6_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS6_SERVO_FLTR
+  #define AXIS6_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS6_PID_P
@@ -1556,11 +1602,10 @@
   #define AXIS7_DRIVER_STATUS           OFF
   #endif
 #endif
-#if AXIS7_DRIVER_MODEL >= SERVO_DRIVER_FIRST
+
+#if AXIS7_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS7_SERVO_PRESENT
-  #if AXIS7_DRIVER_MODEL == SERVO_PE || AXIS7_DRIVER_MODEL == SERVO_EE
-    #define AXIS7_SERVO_DC
-  #endif
+
   #ifndef AXIS7_SERVO_PH1_STATE
   #define AXIS7_SERVO_PH1_STATE         LOW
   #endif
@@ -1568,14 +1613,21 @@
   #define AXIS7_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS7_SERVO_MAX_VELOCITY
-  #define AXIS7_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS7_SERVO_VELOCITY_MAX
+  #define AXIS7_SERVO_VELOCITY_MAX      100
+  #endif
+  #ifndef AXIS7_SERVO_VELOCITY_FACTOR
+  #define AXIS7_SERVO_VELOCITY_FACTOR   frequency*0
   #endif
   #ifndef AXIS7_SERVO_ACCELERATION
   #define AXIS7_SERVO_ACCELERATION      20
   #endif
   #ifndef AXIS7_SERVO_FEEDBACK
   #define AXIS7_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS7_SERVO_FLTR
+  #define AXIS7_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS7_PID_P
@@ -1718,11 +1770,10 @@
   #define AXIS8_DRIVER_STATUS           OFF
   #endif
 #endif
-#if AXIS8_DRIVER_MODEL >= SERVO_DRIVER_FIRST
+
+#if AXIS8_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS8_SERVO_PRESENT
-  #if AXIS8_DRIVER_MODEL == SERVO_PE || AXIS8_DRIVER_MODEL == SERVO_EE
-    #define AXIS8_SERVO_DC
-  #endif
+
   #ifndef AXIS8_SERVO_PH1_STATE
   #define AXIS8_SERVO_PH1_STATE         LOW
   #endif
@@ -1730,14 +1781,21 @@
   #define AXIS8_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS8_SERVO_MAX_VELOCITY
-  #define AXIS8_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS8_SERVO_VELOCITY_MAX
+  #define AXIS8_SERVO_VELOCITY_MAX      100
+  #endif
+  #ifndef AXIS8_SERVO_VELOCITY_FACTOR
+  #define AXIS8_SERVO_VELOCITY_FACTOR   frequency*0
   #endif
   #ifndef AXIS8_SERVO_ACCELERATION
   #define AXIS8_SERVO_ACCELERATION      20
   #endif
   #ifndef AXIS8_SERVO_FEEDBACK
   #define AXIS8_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS8_SERVO_FLTR
+  #define AXIS8_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS8_PID_P
@@ -1880,11 +1938,10 @@
   #define AXIS9_DRIVER_STATUS           OFF
   #endif
 #endif
-#if AXIS9_DRIVER_MODEL >= SERVO_DRIVER_FIRST
+
+#if AXIS9_DRIVER_MODEL >= SERVO_DRIVER_FIRST && AXIS2_DRIVER_MODEL <= SERVO_DRIVER_LAST
   #define AXIS9_SERVO_PRESENT
-  #if AXIS9_DRIVER_MODEL == SERVO_PE || AXIS9_DRIVER_MODEL == SERVO_EE
-    #define AXIS9_SERVO_DC
-  #endif
+
   #ifndef AXIS9_SERVO_PH1_STATE
   #define AXIS9_SERVO_PH1_STATE         LOW
   #endif
@@ -1892,14 +1949,21 @@
   #define AXIS9_SERVO_PH2_STATE         LOW
   #endif
 
-  #ifndef AXIS9_SERVO_MAX_VELOCITY
-  #define AXIS9_SERVO_MAX_VELOCITY      100
+  #ifndef AXIS9_SERVO_VELOCITY_MAX
+  #define AXIS9_SERVO_VELOCITY_MAX      100
+  #endif
+  #ifndef AXIS9_SERVO_VELOCITY_FACTOR
+  #define AXIS9_SERVO_VELOCITY_FACTOR   frequency*0
   #endif
   #ifndef AXIS9_SERVO_ACCELERATION
   #define AXIS9_SERVO_ACCELERATION      20
   #endif
   #ifndef AXIS9_SERVO_FEEDBACK
   #define AXIS9_SERVO_FEEDBACK          FB_PID
+  #endif
+
+  #ifndef AXIS9_SERVO_FLTR
+  #define AXIS9_SERVO_FLTR              OFF
   #endif
 
   #ifndef AXIS9_PID_P
@@ -1957,26 +2021,57 @@
   #define STEP_DIR_MOTOR_PRESENT
 #endif
 
-#if defined(AXIS1_SERVO_PRESENT) || defined(AXIS2_SERVO_PRESENT) || defined(AXIS3_SERVO_PRESENT) || \
-    defined(AXIS4_SERVO_PRESENT) || defined(AXIS5_SERVO_PRESENT) || defined(AXIS6_SERVO_PRESENT) || \
-    defined(AXIS7_SERVO_PRESENT) || defined(AXIS8_SERVO_PRESENT) || defined(AXIS9_SERVO_PRESENT)
-  #define SERVO_MOTOR_PRESENT
-#endif
-
-#if defined(AXIS1_SERVO_DC) || defined(AXIS2_SERVO_DC) || defined(AXIS3_SERVO_DC) || \
-    defined(AXIS4_SERVO_DC) || defined(AXIS5_SERVO_DC) || defined(AXIS6_SERVO_DC) || \
-    defined(AXIS7_SERVO_DC) || defined(AXIS8_SERVO_DC) || defined(AXIS9_SERVO_DC)
+// flag presence of servo motors
+#if AXIS1_DRIVER_MODEL == SERVO_PE || AXIS1_DRIVER_MODEL == SERVO_EE || \
+    AXIS2_DRIVER_MODEL == SERVO_PE || AXIS2_DRIVER_MODEL == SERVO_EE || \
+    AXIS3_DRIVER_MODEL == SERVO_PE || AXIS3_DRIVER_MODEL == SERVO_EE || \
+    AXIS4_DRIVER_MODEL == SERVO_PE || AXIS4_DRIVER_MODEL == SERVO_EE || \
+    AXIS5_DRIVER_MODEL == SERVO_PE || AXIS5_DRIVER_MODEL == SERVO_EE || \
+    AXIS6_DRIVER_MODEL == SERVO_PE || AXIS6_DRIVER_MODEL == SERVO_EE || \
+    AXIS7_DRIVER_MODEL == SERVO_PE || AXIS7_DRIVER_MODEL == SERVO_EE || \
+    AXIS8_DRIVER_MODEL == SERVO_PE || AXIS8_DRIVER_MODEL == SERVO_EE || \
+    AXIS9_DRIVER_MODEL == SERVO_PE || AXIS9_DRIVER_MODEL == SERVO_EE
   #define SERVO_DC_PRESENT
 #endif
 
-#if defined(AXIS1_SERVO_TMC2209) || defined(AXIS2_SERVO_TMC2209) || defined(AXIS3_SERVO_TMC2209) || \
-    defined(AXIS4_SERVO_TMC2209) || defined(AXIS5_SERVO_TMC2209) || defined(AXIS6_SERVO_TMC2209) || \
-    defined(AXIS7_SERVO_TMC2209) || defined(AXIS8_SERVO_TMC2209) || defined(AXIS9_SERVO_TMC2209)
+#if AXIS1_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS1_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS2_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS2_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS3_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS3_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS4_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS4_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS5_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS5_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS6_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS6_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS7_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS7_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS8_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS8_DRIVER_MODEL == SERVO_TMC5160_DC || \
+    AXIS9_DRIVER_MODEL == SERVO_TMC2130_DC || AXIS9_DRIVER_MODEL == SERVO_TMC5160_DC
+  #define SERVO_DC_TMC_SPI_PRESENT
+#endif
+
+#if AXIS1_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS2_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS3_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS4_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS5_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS6_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS7_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS8_DRIVER_MODEL == SERVO_TMC2209 || \
+    AXIS9_DRIVER_MODEL == SERVO_TMC2209
   #define SERVO_TMC2209_PRESENT
 #endif
 
-#if defined(AXIS1_SERVO_TMC5160) || defined(AXIS2_SERVO_TMC5160)
+#if AXIS1_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS2_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS3_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS4_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS5_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS6_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS7_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS8_DRIVER_MODEL == SERVO_TMC5160 || \
+    AXIS9_DRIVER_MODEL == SERVO_TMC5160
   #define SERVO_TMC5160_PRESENT
+#endif
+
+#if defined(SERVO_DC_PRESENT) || defined (SERVO_DC_TMC_SPI_PRESENT) || defined(SERVO_TMC2209_PRESENT) || defined (SERVO_TMC5160_PRESENT)
+  #define SERVO_MOTOR_PRESENT
 #endif
 
 #if defined(AXIS1_ODRIVE_PRESENT) || defined(AXIS2_ODRIVE_PRESENT)
