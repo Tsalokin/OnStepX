@@ -24,11 +24,11 @@ IRAM_ATTR void clockTickWrapper() { fracLAST++; }
 
 #if TIME_LOCATION_SOURCE == GPS
   void gpsCheck() {
-    if (tls.isReady()) {
+    if (site.tls->isReady()) {
       VLF("MSG: Mount, setting site from GPS");
       double latitude, longitude;
       float elevation;
-      tls.getSite(latitude, longitude, elevation);
+      site.tls->getSite(latitude, longitude, elevation);
       site.location.latitude = degToRad(latitude);
       site.location.longitude = degToRad(longitude);
       site.location.elevation = degToRad(elevation);
@@ -36,15 +36,13 @@ IRAM_ATTR void clockTickWrapper() { fracLAST++; }
       site.updateLocation();
       if (mount.isHome()) home.init();
 
-      VLF("MSG: Mount, setting date/time from GPS");
       JulianDate jd;
-      tls.get(jd);
-      site.dateIsReady = true;
-      site.timeIsReady = true;
+
+      // repeat query until we have the time
+      unsigned long syncTimeout = millis() + 1000;
+      while (!site.tls->get(jd) && (long)(millis() - syncTimeout) < 0) { };
+
       site.setDateTime(jd);
-      #if GOTO_FEATURE == ON
-        if (park.state == PS_PARKED) park.restore(false);
-      #endif
 
       VLF("MSG: Mount, stopping GPS monitor task");
       tasks.setDurationComplete(tasks.getHandleByName("gpsChk"));
@@ -62,10 +60,10 @@ IRAM_ATTR void clockTickWrapper() { fracLAST++; }
 
 #if TIME_LOCATION_SOURCE == NTP
   void ntpCheck() {
-    if (tls.isReady()) {
+    if (site.tls->isReady()) {
       VLF("MSG: Mount, setting date/time from NTP");
       JulianDate jd;
-      tls.get(jd);
+      site.tls->get(jd);
       site.dateIsReady = true;
       site.timeIsReady = true;
       site.setDateTime(jd);
@@ -87,18 +85,62 @@ IRAM_ATTR void clockTickWrapper() { fracLAST++; }
   }
 #endif
 
+#if (TIME_LOCATION_PPS_SENSE) != OFF && TIME_LOCATION_PPS_SYNC == ON
+  void ppsMonitor() {
+    static long deltaAvg = 0;
+
+    // monitor and adapt to keep PPS in sync with our UT1
+    static unsigned long lastMicros = 0;
+    long p = micros() - pps.lastMicros;
+    if (pps.lastMicros == lastMicros || p < 250000L) {
+      // DF("MSG: Site,"); D(pps.synced ? ' ' : '!'); DF("sub-micro delta="); D((long)pps.averageSubMicros - 16000000L); DLF("us");
+      return;
+    }
+    lastMicros = pps.lastMicros;
+
+    double h = site.getDateTime().hour*3600.0;
+    char syncc = ' ';
+    long s = round((h - floor(h))*1000000.0);
+    if (!pps.synced) { syncc = '!'; p = 1000000L; s = 1000000L; }
+
+    long delta = p - s;
+    deltaAvg = (delta + deltaAvg*19L)/20L;
+    // DF("MSG: Site,"); D(syncc); DF("sub-micro delta="); D((long)pps.averageSubMicros - 16000000L); DF("us, pps="); D(p/1000L); DF("ms, time.sec="); D(s/1000L); DF("ms, delta="); D(delta/1000); DLF("ms");
+
+    if (abs(deltaAvg) < 3000L) return;
+    pps.averageSubMicrosSkew = (-deltaAvg*HAL_MIN_PPS_SUB_MICRO)/2000L;
+    if (pps.averageSubMicrosSkew < -128) pps.averageSubMicrosSkew = -128; else
+    if (pps.averageSubMicrosSkew > 128) pps.averageSubMicrosSkew = 128;
+  }
+#endif
+
 void Site::init() {
   // get location
   VLF("MSG: Mount, site get Latitude/Longitude from NV");
   readLocation(locationNumber);
   updateLocation();
 
-  // get date/time from the RTC/GPS or NV
+  // get date/time from a TLS or NV
   #if TIME_LOCATION_SOURCE != OFF
-    initError.tls = !tls.init();
+
+    #if TIME_LOCATION_SOURCE == DS3231
+      tls = new TlsDs3231;
+    #elif TIME_LOCATION_SOURCE == DS3234
+      tls = new TlsDs3234;
+    #elif TIME_LOCATION_SOURCE == GPS
+      tls = new TlsGPS;
+    #elif TIME_LOCATION_SOURCE == NTP
+      tls = new TlsNTP;
+    #elif TIME_LOCATION_SOURCE == SD3031
+      tls = new TlsSd3031;
+    #elif TIME_LOCATION_SOURCE == TEENSY
+      tls = new TlsTeensy;
+    #endif
+
+    initError.tls = !tls->init();
     if (!initError.tls) {
-      if (tls.isReady()) {
-        tls.get(ut1);
+      if (tls->isReady()) {
+        tls->get(ut1);
         dateIsReady = true;
         timeIsReady = true;
         VLF("MSG: Mount, site get Date/Time from TLS");
@@ -107,12 +149,12 @@ void Site::init() {
         readJD();
         #if TIME_LOCATION_SOURCE == GPS
           updateTimeoutTime = millis() + GPS_TIMEOUT_MINUTES*60000UL;
-          VF("MSG: Transform, start GPS check task (rate 5000ms priority 7)... ");
+          VF("MSG: Site, start GPS check task (rate 5000ms priority 7)... ");
           if (tasks.add(5000, 0, true, 7, gpsCheck, "gpsChk")) { VLF("success"); } else { VLF("FAILED!"); }
         #endif
         #if TIME_LOCATION_SOURCE == NTP
           updateTimeoutTime = millis() + NTP_TIMEOUT_SECONDS*1000UL;
-          VF("MSG: Transform, start NTP check task (rate 5000ms priority 7)... ");
+          VF("MSG: Site, start NTP check task (rate 5000ms priority 7)... ");
           if (tasks.add(5000, 0, true, 7, ntpCheck, "ntpChk")) { VLF("success"); } else { VLF("FAILED!"); }
         #endif
       }
@@ -141,6 +183,12 @@ void Site::init() {
 
   #if (TIME_LOCATION_PPS_SENSE) != OFF
     pps.init();
+    #if TIME_LOCATION_PPS_SYNC == ON
+      VF("MSG: Mount, site start PPS monitor task (rate 333ms priority 6)... ");
+      delay(100);
+      // period ms (0=idle), duration ms (0=forever), repeat, priority (highest 0..7 lowest), task_handle
+      if (tasks.add(333, 0, true, 6, ppsMonitor, "ppsMon")) { VLF("success"); } else { VLF("FAILED!"); }
+    #endif
   #endif
 }
 
@@ -159,7 +207,7 @@ void Site::updateLocation() {
 // update the TLS 
 void Site::updateTLS() {
   #if TIME_LOCATION_SOURCE != OFF
-    tls.set(ut1);
+    tls->set(ut1);
   #endif
 
   if (isDateTimeReady()) {

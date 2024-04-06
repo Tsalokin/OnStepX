@@ -14,12 +14,17 @@
 #include <DFRobot_SD3031.h> // https://github.com/cdjq/DFRobot_SD3031
 DFRobot_SD3031 rtcSD3031(&HAL_Wire);
 
-bool TimeLocationSource::init() {
+bool TlsSd3031::init() {
   HAL_Wire.begin();
-  HAL_Wire.setClock(HAL_WIRE_CLOCK);
+  #ifdef HAL_WIRE_CLOCK
+    HAL_Wire.setClock(HAL_WIRE_CLOCK);
+  #endif
+
   bool error = !rtcSD3031.begin();
   if (!error) {
-    HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #ifdef HAL_WIRE_CLOCK
+      HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #endif
 
     rtcSD3031.setHourSystem(rtcSD3031.e24hours);
 
@@ -33,12 +38,14 @@ bool TimeLocationSource::init() {
   #ifdef HAL_WIRE_RESET_AFTER_CONNECT
     HAL_Wire.end();
     HAL_Wire.begin();
-    HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #ifdef HAL_WIRE_CLOCK
+      HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #endif
   #endif
   return ready;
 }
 
-void TimeLocationSource::set(JulianDate ut1) {
+void TlsSd3031::set(JulianDate ut1) {
   if (!ready) return;
 
   GregorianDate greg = calendars.julianDayToGregorian(ut1);
@@ -51,15 +58,15 @@ void TimeLocationSource::set(JulianDate ut1) {
   set(greg.year, greg.month, greg.day, h, floor(m), floor(s));
 }
 
-void TimeLocationSource::set(int year, int month, int day, int hour, int minute, int second) {
+void TlsSd3031::set(int year, int month, int day, int hour, int minute, int second) {
   #ifdef TLS_TIMELIB
     setTime(hour, minute, second, day, month, year);
   #endif
   rtcSD3031.setTime(year, month, day, hour, minute, second);
 }
 
-void TimeLocationSource::get(JulianDate &ut1) {
-  if (!ready) return;
+bool TlsSd3031::get(JulianDate &ut1) {
+  if (!ready) return false;
 
   sTimeData_t dateTime = rtcSD3031.getRTCTime();
 
@@ -72,8 +79,8 @@ void TimeLocationSource::get(JulianDate &ut1) {
     ut1 = calendars.gregorianToJulianDay(greg);
     ut1.hour = dateTime.hour + dateTime.minute/60.0 + dateTime.second/3600.0;
   }
-}
 
-TimeLocationSource tls;
+  return true;
+}
 
 #endif

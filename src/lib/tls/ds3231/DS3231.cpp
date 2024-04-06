@@ -14,14 +14,22 @@
 #include <RtcDS3231.h> // https://github.com/Makuna/Rtc/archive/master.zip
 RtcDS3231<TwoWire> rtcDS3231(HAL_Wire);
 
-bool TimeLocationSource::init() {
+#include "../PPS.h"
+
+bool TlsDs3231::init() {
   HAL_Wire.begin();
-  HAL_Wire.setClock(HAL_WIRE_CLOCK);
+  #ifdef HAL_WIRE_CLOCK
+    HAL_Wire.setClock(HAL_WIRE_CLOCK);
+  #endif
+
   HAL_Wire.beginTransmission(0x68);
   bool error = HAL_Wire.endTransmission() != 0;
   if (!error) {
     rtcDS3231.Begin();
-    HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #ifdef HAL_WIRE_CLOCK
+      HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #endif
+
     if (!rtcDS3231.GetIsRunning()) rtcDS3231.SetIsRunning(true);
 
     // see if the RTC is present
@@ -41,12 +49,14 @@ bool TimeLocationSource::init() {
   #ifdef HAL_WIRE_RESET_AFTER_CONNECT
     HAL_Wire.end();
     HAL_Wire.begin();
-    HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #ifdef HAL_WIRE_CLOCK
+      HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    #endif
   #endif
   return ready;
 }
 
-void TimeLocationSource::set(JulianDate ut1) {
+void TlsDs3231::set(JulianDate ut1) {
   if (!ready) return;
 
   GregorianDate greg = calendars.julianDayToGregorian(ut1);
@@ -59,7 +69,7 @@ void TimeLocationSource::set(JulianDate ut1) {
   set(greg.year, greg.month, greg.day, h, floor(m), floor(s));
 }
 
-void TimeLocationSource::set(int year, int month, int day, int hour, int minute, int second) {
+void TlsDs3231::set(int year, int month, int day, int hour, int minute, int second) {
   #ifdef TLS_TIMELIB
     setTime(hour, minute, second, day, month, year);
   #endif
@@ -67,18 +77,35 @@ void TimeLocationSource::set(int year, int month, int day, int hour, int minute,
   rtcDS3231.SetDateTime(updateTime);
 }
 
-void TimeLocationSource::get(JulianDate &ut1) {
-  if (!ready) return;
+bool TlsDs3231::get(JulianDate &ut1) {
+  if (!ready) return false;
 
+  unsigned long t = 0.5;
+  #if defined(TIME_LOCATION_PPS_SENSE) && (TIME_LOCATION_PPS_SENSE) != OFF
+    // wait until we're roughly in the middle of a second
+    if (pps.synced) {
+      do { t = micros() - pps.lastMicros; } while (t < 400000 || t > 600000);
+    }
+  #endif
+
+  GregorianDate greg;
   RtcDateTime now = rtcDS3231.GetDateTime();
   if (now.Year() >= 2018 && now.Year() <= 3000 && now.Month() >= 1 && now.Month() <= 12 && now.Day() >= 1 && now.Day() <= 31 &&
       now.Hour() <= 23 && now.Minute() <= 59 && now.Second() <= 59) {
-    GregorianDate greg; greg.year = now.Year(); greg.month = now.Month(); greg.day = now.Day();
+    greg.year = now.Year();
+    greg.month = now.Month();
+    greg.day = now.Day();
     ut1 = calendars.gregorianToJulianDay(greg);
-    ut1.hour = now.Hour() + now.Minute()/60.0 + now.Second()/3600.0;
+    ut1.hour = now.Hour() + now.Minute()/60.0 + (now.Second() + t/1000000.0)/3600.0;
+  } else {
+    greg.year = 2000;
+    greg.month = 1;
+    greg.day = 1;
+    ut1 = calendars.gregorianToJulianDay(greg);
+    ut1.hour = 0.0;
   }
-}
 
-TimeLocationSource tls;
+  return true;
+}
 
 #endif

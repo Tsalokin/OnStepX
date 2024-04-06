@@ -95,7 +95,7 @@ void StepDirTmcSPI::init(float param1, float param2, float param3, float param4,
 
 // validate driver parameters
 bool StepDirTmcSPI::validateParameters(float param1, float param2, float param3, float param4, float param5, float param6) {
-  StepDirDriver::validateParameters(param1, param2, param3, param4, param5, param6);
+  if (!StepDirDriver::validateParameters(param1, param2, param3, param4, param5, param6)) return false;
 
   int maxCurrent;
   if (settings.model == TMC2130) maxCurrent = 1500; else
@@ -142,7 +142,7 @@ int StepDirTmcSPI::modeMicrostepSlewing() {
 
 void StepDirTmcSPI::modeDecayTracking() {
   setDecayMode(settings.decay);
-  driver->rms_current(settings.currentRun*0.7071F, settings.currentHold/settings.currentRun);
+  driver->rms_current(settings.currentRun*0.7071F, (float)settings.currentHold/(float)settings.currentRun);
 }
 
 void StepDirTmcSPI::modeDecaySlewing() {
@@ -155,7 +155,7 @@ void StepDirTmcSPI::modeDecaySlewing() {
 void StepDirTmcSPI::updateStatus() {
   if (settings.status == ON) {
     if ((long)(millis() - timeLastStatusUpdate) > 200) {
-      uint32_t status_word;
+
       TMC2130_n::DRV_STATUS_t status_result;
       if (settings.model == TMC2130) { status_result.sr = ((TMC2130Stepper*)driver)->DRV_STATUS(); } else
       if (settings.model == TMC5160) { status_result.sr = ((TMC5160Stepper*)driver)->DRV_STATUS(); } else
