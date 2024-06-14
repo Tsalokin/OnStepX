@@ -26,6 +26,11 @@
 #define SERIAL_DEBUG_BAUD             9600
 #endif
 
+// identification
+#ifndef CONFIG_NAME
+#define CONFIG_NAME "OnStepX"
+#endif
+
 // serial ports
 #ifndef SERIAL_A_BAUD_DEFAULT
 #define SERIAL_A_BAUD_DEFAULT         9600
@@ -572,6 +577,9 @@
 #define MOUNT_SUBTYPE                 FORK
 #define AXIS2_TANGENT_ARM             ON
 #define AXIS2_TANGENT_ARM_CORRECTION  ON
+#endif
+#if MOUNT_TYPE == ALTALT
+#define MOUNT_SUBTYPE                 ALTALT
 #endif
 #if MOUNT_TYPE == ALTAZM
 #define MOUNT_SUBTYPE                 ALTAZM
