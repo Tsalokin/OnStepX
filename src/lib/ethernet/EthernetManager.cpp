@@ -4,6 +4,7 @@
 #if defined(OPERATIONAL_MODE) && (OPERATIONAL_MODE == ETHERNET_W5100 || OPERATIONAL_MODE == ETHERNET_W5500)
 
 #include "../tasks/OnTask.h"
+#include "../nv/Nv.h"
 
 #if MDNS_SERVER == ON
   enum MdnsReady {MD_WAIT, MD_READY, MD_FAIL};
@@ -14,11 +15,13 @@
   void mdnsPoll() {
     static MdnsReady mdnsReady = MD_WAIT;
     if (mdnsReady == MD_WAIT && millis() > 5000) {
-      if (mdns.begin(Ethernet.localIP(), MDNS_NAME)) {
-        VLF("MSG: Ethernet, mDNS started");
+      char name[] = MDNS_NAME;
+      strtohostname2(name);
+      if (mdns.begin(Ethernet.localIP(), name)) {
+        VF("MSG: Ethernet, mDNS started for "); VL(name);
         mdnsReady = MD_READY;
       } else {
-        VLF("WRN: Ethernet, mDNS start failed!");
+        VF("WRN: Ethernet, mDNS start FAILED for "); VL(name);
         mdnsReady = MD_FAIL;
       }
     }
@@ -28,22 +31,7 @@
 
 bool EthernetManager::init() {
   if (!active) {
-    #ifdef NV_ETHERNET_SETTINGS_BASE
-      if (EthernetSettingsSize < sizeof(EthernetSettings)) { nv.initError = true; DL("ERR: EthernetManager::init(); EthernetSettingsSize error"); }
-
-      if (!nv.hasValidKey() || nv.isNull(NV_ETHERNET_SETTINGS_BASE, sizeof(EthernetSettings))) {
-        VLF("MSG: Ethernet, writing defaults to NV");
-        nv.writeBytes(NV_ETHERNET_SETTINGS_BASE, &settings, sizeof(EthernetSettings));
-      }
-
-      nv.readBytes(NV_ETHERNET_SETTINGS_BASE, &settings, sizeof(EthernetSettings));
-    #endif
-
-    VF("MSG: Ethernet, DHCP En = "); VL(settings.dhcpEnabled);
-    VF("MSG: Ethernet, IP      = "); V(settings.ip[0]); V("."); V(settings.ip[1]); V("."); V(settings.ip[2]); V("."); VL(settings.ip[3]);
-    VF("MSG: Ethernet, GW      = "); V(settings.gw[0]); V("."); V(settings.gw[1]); V("."); V(settings.gw[2]); V("."); VL(settings.gw[3]);
-    VF("MSG: Ethernet, SN      = "); V(settings.sn[0]); V("."); V(settings.sn[1]); V("."); V(settings.sn[2]); V("."); VL(settings.sn[3]);
-    VF("MSG: Ethernet, TARGET  = "); V(settings.target[0]); V("."); V(settings.target[1]); V("."); V(settings.target[2]); V("."); VL(settings.target[3]);
+    readSettings();
 
     #if defined(ETHERNET_CS_PIN) && ETHERNET_CS_PIN != OFF
       VF("MSG: Ethernet, device ETHERNET_CS_PIN ("); V(ETHERNET_CS_PIN); VL(")");
@@ -96,7 +84,52 @@ void EthernetManager::restart() {
   }
 }
 
+void EthernetManager::disconnect() {
+  VLF("MSG: Ethernet, disconnect ignored!");      
+}
+
+void EthernetManager::setStation(int number) {
+  if (number >= 1 && number <= EthernetStationCount) stationNumber = number;
+  sta = &settings.station[stationNumber - 1];
+}
+
+void EthernetManager::readSettings() {
+  if (settingsReady) return;
+
+  #ifdef NV_ETHERNET_SETTINGS_BASE
+    if (EthernetSettingsSize < sizeof(EthernetSettings)) { nv.initError = true; DL("ERR: EthernetManager::init(); EthernetSettingsSize error"); }
+
+    if (!nv.hasValidKey() || nv.isNull(NV_ETHERNET_SETTINGS_BASE, sizeof(EthernetSettings))) {
+      VLF("MSG: Ethernet, writing defaults to NV");
+      nv.writeBytes(NV_ETHERNET_SETTINGS_BASE, &settings, sizeof(EthernetSettings));
+    }
+
+    nv.readBytes(NV_ETHERNET_SETTINGS_BASE, &settings, sizeof(EthernetSettings));
+  #endif
+
+  #if DEBUG != OFF
+    int currentStationNumber = stationNumber;
+
+    VF("MSG: Ethernet, DHCP En     = "); VL(settings.dhcpEnabled);
+    VF("MSG: Ethernet, IP          = "); V(settings.ip[0]); V("."); V(settings.ip[1]); V("."); V(settings.ip[2]); V("."); VL(settings.ip[3]);
+    VF("MSG: Ethernet, GW          = "); V(settings.gw[0]); V("."); V(settings.gw[1]); V("."); V(settings.gw[2]); V("."); VL(settings.gw[3]);
+    VF("MSG: Ethernet, SN          = "); V(settings.sn[0]); V("."); V(settings.sn[1]); V("."); V(settings.sn[2]); V("."); VL(settings.sn[3]);
+
+    for (int station = 1; station <= EthernetStationCount; station++) {
+      setStation(station);
+
+      VF("MSG: Ethernet, Sta"); V(stationNumber); VF(" NAME   = "); VL(sta->host);
+      VF("MSG: Ethernet, Sta"); V(stationNumber); VF(" TARGET = "); V(sta->target[0]); V("."); V(sta->target[1]); V("."); V(sta->target[2]); V("."); VL(sta->target[3]);
+    }
+    stationNumber = currentStationNumber;
+  #endif
+
+  settingsReady = true;
+}
+
 void EthernetManager::writeSettings() {
+  if (!settingsReady) return;
+
   #ifdef NV_ETHERNET_SETTINGS_BASE
     VLF("MSG: Ethernet, writing settings to NV");
     nv.writeBytes(NV_ETHERNET_SETTINGS_BASE, &settings, sizeof(EthernetSettings));

@@ -2,12 +2,16 @@
 // OnStepX telescope control
 
 #include "../Common.h"
-#include "../lib/tasks/OnTask.h"
 
+#include "Telescope.h"
+
+#include "../lib/tasks/OnTask.h"
+#include "../lib/gpioEx/GpioEx.h"
+#include "../lib/nv/Nv.h"
 #include "../lib/convert/Convert.h"
+
 #include "../libApp/commands/ProcessCmds.h"
 #include "../libApp/weather/Weather.h"
-#include "Telescope.h"
 
 #include "addonFlasher/AddonFlasher.h"
 #include "mount/Mount.h"
@@ -23,6 +27,7 @@
 #include "rotator/Rotator.h"
 #include "focuser/Focuser.h"
 #include "auxiliary/Features.h"
+#include "../plugins/Plugins.config.h"
 
 // possible reset function for this MCU
 #ifdef HAL_RESET_FUNC
@@ -31,10 +36,37 @@
 
 bool Telescope::command(char reply[], char command[], char parameter[], bool *supressFrame, bool *numericReply, CommandError *commandError) {
 
+  #if PLUGIN1 != OFF && PLUGIN1_COMMAND_PROCESSING == ON
+    if (PLUGIN1.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+  #if PLUGIN2 != OFF && PLUGIN2_COMMAND_PROCESSING == ON
+    if (PLUGIN2.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+  #if PLUGIN3 != OFF && PLUGIN3_COMMAND_PROCESSING == ON
+    if (PLUGIN3.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+  #if PLUGIN4 != OFF && PLUGIN4_COMMAND_PROCESSING == ON
+    if (PLUGIN4.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+  #if PLUGIN5 != OFF && PLUGIN5_COMMAND_PROCESSING == ON
+    if (PLUGIN5.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+  #if PLUGIN6 != OFF && PLUGIN6_COMMAND_PROCESSING == ON
+    if (PLUGIN6.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+  #if PLUGIN7 != OFF && PLUGIN7_COMMAND_PROCESSING == ON
+    if (PLUGIN7.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+  #if PLUGIN8 != OFF && PLUGIN8_COMMAND_PROCESSING == ON
+    if (PLUGIN8.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+  #endif
+
   #ifdef MOUNT_PRESENT
     if (mount.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
     if (guide.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
-    if (gpio.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+    #if GPIO_DEVICE != OFF
+      if (gpio.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
+    #endif
     if (mountStatus.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
     if (goTo.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
     if (park.command(reply, command, parameter, supressFrame, numericReply, commandError)) return true;
@@ -157,7 +189,7 @@ bool Telescope::command(char reply[], char command[], char parameter[], bool *su
       if (parameter[0] == 'N') sprintf(reply, "%i.%02i%s", firmware.version.major, firmware.version.minor, firmware.version.patch); else
       if (parameter[0] == 'P') strcpy(reply, firmware.name); else
       if (parameter[0] == 'T') strcpy(reply, firmware.time); else
-      if (parameter[0] == 'C') strncpy(reply, CONFIG_NAME, 40); else *commandError = CE_CMD_UNKNOWN;
+      if (parameter[0] == 'C') strncpy(reply, PRODUCT_DESCRIPTION, 40); else *commandError = CE_CMD_UNKNOWN;
       *numericReply = false;
     } else
 
@@ -189,6 +221,18 @@ bool Telescope::command(char reply[], char command[], char parameter[], bool *su
         if (parameter[1] == 'E') {
           sprintF(reply, "%3.1f", weather.getDewPoint());
           *numericReply = false;
+        } else
+
+        // :GX9F#     MCU temperature in deg. C
+        //            Returns: +/-n.n
+        if (parameter[1] == 'F') {
+          if (!isnan(telescope.mcuTemperature)) {
+            sprintF(reply, "%1.0f", telescope.mcuTemperature);
+            *numericReply = false;
+          } else {
+            *numericReply = true;
+            *commandError = CE_0;
+          }
         } else return false;
       } else
 

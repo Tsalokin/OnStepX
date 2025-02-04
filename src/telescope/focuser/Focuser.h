@@ -6,6 +6,7 @@
 
 #ifdef FOCUSER_PRESENT
 
+#include "../../lib/nv/Nv.h"
 #include "../../lib/axis/Axis.h"
 #include "../../libApp/commands/ProcessCmds.h"
 #include "../Telescope.h"
@@ -118,6 +119,9 @@ class Focuser {
     // set TCF T0, in deg. C
     bool setTcfT0(int index, float value);
 
+    // get home position in microns
+    float getHomePosition(int index);
+
     // get backlash in microns
     int getBacklash(int index);
 
@@ -130,6 +134,9 @@ class Focuser {
     // start move in the specified direction
     CommandError move(int index, Direction dir);
 
+    // start move to the home position
+    CommandError moveHome(int index);
+
     // get goto rate, 1 for 0.5x base, 2 for 0.66x base, 3 for base, 4 for 1.5x base, 5 for 2x base
     int getGotoRate(int index);
 
@@ -138,6 +145,9 @@ class Focuser {
 
     // move focuser to a specific location (in steps)
     CommandError gotoTarget(int index, long target);
+
+    // reset focuser to a specific location (in steps)
+    CommandError resetTarget(int index, long target);
 
     // park focuser at its current location
     CommandError park(int index);
@@ -177,6 +187,8 @@ class Focuser {
     extern StepDirMotor motor4;
   #elif defined(AXIS4_SERVO_PRESENT)
     extern ServoMotor motor4;
+  #elif defined(AXIS4_KTECH_PRESENT)
+    extern KTechMotor motor4;
   #endif
   extern Axis axis4;
 #endif
@@ -186,6 +198,8 @@ class Focuser {
     extern StepDirMotor motor5;
   #elif defined(AXIS5_SERVO_PRESENT)
     extern ServoMotor motor5;
+  #elif defined(AXIS5_KTECH_PRESENT)
+    extern KTechMotor motor5;
   #endif
   extern Axis axis5;
 #endif
@@ -195,6 +209,8 @@ class Focuser {
     extern StepDirMotor motor6;
   #elif defined(AXIS6_SERVO_PRESENT)
     extern ServoMotor motor6;
+  #elif defined(AXIS6_KTECH_PRESENT)
+    extern KTechMotor motor6;
   #endif
   extern Axis axis6;
 #endif
@@ -204,6 +220,8 @@ class Focuser {
     extern StepDirMotor motor7;
   #elif defined(AXIS7_SERVO_PRESENT)
     extern ServoMotor motor7;
+  #elif defined(AXIS7_KTECH_PRESENT)
+    extern KTechMotor motor7;
   #endif
   extern Axis axis7;
 #endif
@@ -213,6 +231,8 @@ class Focuser {
     extern StepDirMotor motor8;
   #elif defined(AXIS8_SERVO_PRESENT)
     extern ServoMotor motor8;
+  #elif defined(AXIS8_KTECH_PRESENT)
+    extern KTechMotor motor8;
   #endif
   extern Axis axis8;
 #endif
@@ -222,6 +242,8 @@ class Focuser {
     extern StepDirMotor motor9;
   #elif defined(AXIS9_SERVO_PRESENT)
     extern ServoMotor motor9;
+  #elif defined(AXIS9_KTECH_PRESENT)
+    extern KTechMotor motor9;
   #endif
   extern Axis axis9;
 #endif

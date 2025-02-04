@@ -5,7 +5,10 @@
 
 #ifdef MOUNT_PRESENT
 
+#include "../../../lib/nv/Nv.h"
+
 #include "../../../libApp/commands/ProcessCmds.h"
+
 #include "../../Telescope.h"
 #include "../home/Home.h"
 #include "../Mount.h"
@@ -230,6 +233,9 @@ bool Site::command(char *reply, char *command, char *parameter, bool *supressFra
       if (dut1 >= -0.9 && dut1 <= 0.9) {
         #if TIME_LOCATION_SOURCE != OFF
           tls->DUT1 = dut1;
+        #endif
+        #if TIME_LOCATION_SOURCE_FALLBACK != OFF
+          tlsFallback->DUT1 = dut1;
         #endif
       } else *commandError = CE_PARAM_FORM;
     } else

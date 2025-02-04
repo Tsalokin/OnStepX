@@ -6,7 +6,7 @@
 #ifdef STEP_DIR_MOTOR_PRESENT
 
 // the various microsteps for different driver models, with the bit modes for each
-#define DRIVER_MODEL_COUNT 17 
+#define DRIVER_MODEL_COUNT 18 
 
 const static int8_t steps[DRIVER_MODEL_COUNT][9] =
 //  1   2   4   8  16  32  64 128 256x
@@ -25,6 +25,7 @@ const static int8_t steps[DRIVER_MODEL_COUNT][9] =
   {OFF,OFF,OFF,  0,  3,  1,  2,OFF,OFF},   // TMC2209S/TMC2226S
 
   {  8,  7,  6,  5,  4,  3,  2,  1,  0},   // TMC2130
+  {  8,  7,  6,  5,  4,  3,  2,  1,  0},   // TMC2660
   {  8,  7,  6,  5,  4,  3,  2,  1,  0},   // TMC5160
   {  8,  7,  6,  5,  4,  3,  2,  1,  0},   // TMC5161
 
@@ -49,6 +50,7 @@ const static int16_t DriverPulseWidth[DRIVER_MODEL_COUNT] =
   103,   // TMC2209S/TMC2226S
 
   103,   // TMC2130
+  103,   // TMC2660
   103,   // TMC5160
   103,   // TMC5161
 
@@ -73,6 +75,7 @@ const static int16_t DriverPulseWidth[DRIVER_MODEL_COUNT] =
     "TMC2209/TMC2226",
 
     "TMC2130 (SPI)",
+    "TMC2660 (SPI)",
     "TMC5160 (SPI)",
     "TMC5161 (SPI)",
 
@@ -94,7 +97,7 @@ void StepDirDriver::init(float param1, float param2, float param3, float param4,
   if (settings.decay == OFF) settings.decay = STEALTHCHOP;
   if (settings.decaySlewing == OFF) settings.decaySlewing = SPREADCYCLE;
 
-  VF("MSG: StepDirDriver"); V(axisNumber); VF(", init model "); V(DRIVER_NAME[settings.model]);
+  VF(axisPrefix); V(DRIVER_NAME[settings.model]);
   VF(" u-step mode "); if (settings.microsteps == OFF) { VF("OFF (assuming 1X)"); settings.microsteps = 1; } else { V(settings.microsteps); VF("X"); }
   VF(" (goto mode "); if (settings.microstepsSlewing == OFF) { VLF("OFF)"); } else { V(settings.microstepsSlewing); VL("X)"); }
 
@@ -115,13 +118,12 @@ bool StepDirDriver::validateParameters(float param1, float param2, float param3,
     if (axisNumber > 2) pulseWidth = 2000;
 
     if (DriverPulseWidth[settings.model] == OFF) {
-      VF("WRN: StepDirDriver::validateParameters(), Axis"); V(axisNumber); VF(" ");
-      V(DRIVER_NAME[settings.model]); VF(" min. pulse width unknown!");
+      VF(axisPrefix); V(DRIVER_NAME[settings.model]); VF(" min. pulse width unknown!");
     }
 
     if (DriverPulseWidth[settings.model] > pulseWidth) {
-      DF("ERR: StepDirDriver::validateParameters(), Axis"); D(axisNumber); DF(" "); 
-      D(DRIVER_NAME[settings.model]); DF(" min. pulse width "); D(DriverPulseWidth[settings.model]); DF("ns > platform at ");
+      DF(axisPrefixWarn); D(DRIVER_NAME[settings.model]);
+      DF(" min. pulse width "); D(DriverPulseWidth[settings.model]); DF("ns > platform at ");
       D(pulseWidth); DLF("ns");
       return false;
     }
@@ -135,22 +137,22 @@ bool StepDirDriver::validateParameters(float param1, float param2, float param3,
   UNUSED(param6);
 
   if (subdivisions == OFF) {
-    VF("WRN: StepDirDriver::validateParameters(), Axis"); V(axisNumber); VLF(" subdivisions OFF (assuming 1X)");
+    VF(axisPrefixWarn); VLF("subdivisions OFF (assuming 1X)");
     subdivisions = 1;
   }
 
   if (subdivisions <= subdivisionsGoto) {
-    DF("ERR: StepDirDriver::validateParameters(), Axis"); D(axisNumber); DLF(" subdivisions must be > subdivisionsGoto");
+    DF(axisPrefixWarn); DLF("subdivisions must be > subdivisionsGoto");
     return false;
   }
 
   if (subdivisions != OFF && (subdivisionsToCode(subdivisions) == OFF)) {
-    DF("ERR: StepDirDriver::validateParameters(), Axis"); D(axisNumber); DF(" bad subdivisions="); DL(subdivisions);
+    DF(axisPrefixWarn); DF("bad subdivisions="); DL(subdivisions);
     return false;
   }
 
   if (subdivisionsGoto != OFF && (subdivisionsToCode(subdivisionsGoto) == OFF)) {
-    DF("ERR: StepDirDriver::validateParameters(), Axis"); D(axisNumber); DF(" bad subdivisionsGoto="); DL(subdivisionsGoto);
+    DF(axisPrefixWarn); DF("bad subdivisionsGoto="); DL(subdivisionsGoto);
     return false;
   }
 
@@ -187,7 +189,7 @@ void StepDirDriver::updateStatus() {
         (status.overTemperature           != lastStatus.overTemperature) ||
 //      (status.standstill                != lastStatus.standstill) ||
         (status.fault                     != lastStatus.fault)) {
-      VF("MSG: StepDirDriver"); V(axisNumber); VF(", status change ");
+      VF(axisPrefix);
       VF("SGA"); if (status.outputA.shortToGround) VF("< "); else VF(". "); 
       VF("OLA"); if (status.outputA.openLoad) VF("< "); else VF(". "); 
       VF("SGB"); if (status.outputB.shortToGround) VF("< "); else VF(". "); 

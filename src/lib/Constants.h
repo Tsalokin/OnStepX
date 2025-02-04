@@ -5,29 +5,42 @@
 #define AUTO                        -1
 #define OFF                         -1
 #define ON                          -2
-#define ALT                         -3
 #define AUX                         -4
-#define SLAVE                       -5
-#define BOTH                        -6
-#define SoftSerial                  -7
-#define HardSerial                  -8
-#define CONSOLE                     -9
-#define PROFILER                    -10
-#define VERBOSE                     -11
-#define REMOTE                      -12
-#define ETHERNET_W5100              -13
-#define ETHERNET_W5500              -14
-#define WIFI                        -15
-#define WIFI_ACCESS_POINT           -16    // shorthand for easy WIFI mode settings
-#define WIFI_STATION                -17    // shorthand for easy WIFI mode settings
-#define BLUETOOTH                   -18    // shorthand for easy bluetooth mode settings
-#define SHARED                      -19
-#define STANDARD                    -20
-#define PERSISTENT                  -21
-#define ERRORS_ONLY                 -22
+#define MASTER                      -5
+#define SLAVE                       -6
+#define BOTH                        -7
+#define SoftSerial                  -8
+#define HardSerial                  -9
+#define CONSOLE                     -10
+#define PROFILER                    -11
+#define VERBOSE                     -12
+#define REMOTE                      -13
+#define ETHERNET_W5100              -14
+#define ETHERNET_W5500              -15
+#define WIFI                        -16
+#define WIFI_ACCESS_POINT           -17    // shorthand for easy WIFI mode settings
+#define WIFI_STATION                -18    // shorthand for easy WIFI mode settings
+#define BLUETOOTH                   -19    // shorthand for easy bluetooth mode settings
+#define SHARED                      -20
+#define STANDARD                    -21
+#define PERSISTENT                  -22
+#define ERRORS_ONLY                 -23
+#define MINIMUM                     -24
+#define MIDDLE                      -25
+#define MAXIMUM                     -26
 #define INVALID                     -127
 
+// CAN interface options
+#define CAN_SAN                     0
+#define CAN_ESP32                   1
+#define CAN_MCP2515                 2
+#define CAN0_TEENSY4                3
+#define CAN1_TEENSY4                4
+#define CAN2_TEENSY4                5
+#define CAN3_TEENSY4                6
+
 // driver (step/dir interface, usually for stepper motors)
+// changes here must be reflected in the StepDirDriver.cpp file, etc.
 #define STEP_DIR_DRIVER_FIRST       0
 #define A4988                       0      // allows M0,M1,M2 bit patterens for 1x,2x,4x,8x,16x
 #define DRV8825                     1      // allows M0,M1,M2 bit patterens for 1x,2x,4x,8x,16x,32x
@@ -44,14 +57,15 @@
 #define TMC2226S                    11     // allows M0,M1    bit patterens for 8x,16x,32x,64x (M2 sets spreadCycle/stealthChop, uses 256x intpol)
 #define TMC_DRIVER_FIRST            12
 #define TMC2130                     12     // uses TMC software SPI comms   for 1x,2x...,256x  (SPI sets spreadCycle/stealthChop etc.)
-#define TMC5160                     13     // uses TMC software SPI comms   for 1x,2x...,256x  (SPI sets spreadCycle/stealthChop etc.)
-#define TMC5161                     14     // uses TMC software SPI comms   for 1x,2x...,256x  (SPI sets spreadCycle/stealthChop etc.)
-#define TMC_UART_DRIVER_FIRST       15
-#define TMC2208                     15     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
-#define TMC2225                     15     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
-#define TMC2209                     16     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
-#define TMC2226                     16     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
-#define STEP_DIR_DRIVER_LAST        16
+#define TMC2660                     13     // uses TMC software SPI comms   for 1x,2x...,256x  (SPI sets spreadCycle/stealthChop etc.)
+#define TMC5160                     14     // uses TMC software SPI comms   for 1x,2x...,256x  (SPI sets spreadCycle/stealthChop etc.)
+#define TMC5161                     15     // uses TMC software SPI comms   for 1x,2x...,256x  (SPI sets spreadCycle/stealthChop etc.)
+#define TMC_UART_DRIVER_FIRST       16
+#define TMC2208                     16     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
+#define TMC2225                     16     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
+#define TMC2209                     17     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
+#define TMC2226                     17     // uses TMC software UART comms  for 1x,2x...,256x  (UART sets spreadCycle/stealthChop etc, dedicated RX/TX UART to each driver using index 0)
+#define STEP_DIR_DRIVER_LAST        17
 
 // driver (step/dir) decay mode
 #define DRIVER_DECAY_MODE_FIRST     1
@@ -63,6 +77,7 @@
 #define DRIVER_DECAY_MODE_LAST      6
 
 // servo driver (usually for DC motors equipped with encoders)
+// changes here must be reflected in the ServoDriver.cpp file, etc.
 #define SERVO_DRIVER_FIRST          100
 #define SERVO_PE                    100    // SERVO, direction (phase) and pwm (enable) connections
 #define SERVO_EE                    101    // SERVO, dual pwm input (enable/enable) connections
@@ -113,15 +128,18 @@
 #define NV_KEY_VALUE                111111111UL
 
 #define NV_DEF                      0
-#define NV_DEFAULT                  0
-#define NV_2416                     1  // 2KB I2C EEPROM AT DEFAULT ADDRESS 0x50
-#define NV_2432                     2  // 4KB I2C EEPROM AT DEFAULT ADDRESS 0x50
-#define NV_2464                     3  // 8KB I2C EEPROM AT DEFAULT ADDRESS 0x50
-#define NV_24128                    4  // 16KB I2C EEPROM AT DEFAULT ADDRESS 0x50
-#define NV_24256                    5  // 32KB I2C EEPROM AT DEFAULT ADDRESS 0x50
-#define NV_AT24C32                  6  // 4KB I2C EEPROM AT DEFAULT ADDRESS 0x57 (ZS-01 module for instance)
-#define NV_MB85RC64                 7  // 8KB I2C FRAM AT DEFAULT ADDRESS 0x50
-#define NV_MB85RC256                8  // 32KB I2C FRAM AT DEFAULT ADDRESS 0x50
+#define NV_DEFAULT                  0  // PLATFORM SPECIFIC (HAL)
+#define NV_EEPROM                   1  // EEPROM.h
+#define NV_ESP                      2  // ESP8266/ESP32 EEPROM emulation with commits
+#define NV_M0                       3  // Arduino M0 EEPROM emulation with commits
+#define NV_2416                     4  // 2KB I2C EEPROM AT DEFAULT ADDRESS 0x50
+#define NV_2432                     5  // 4KB I2C EEPROM AT DEFAULT ADDRESS 0x50
+#define NV_2464                     6  // 8KB I2C EEPROM AT DEFAULT ADDRESS 0x50
+#define NV_24128                    7  // 16KB I2C EEPROM AT DEFAULT ADDRESS 0x50
+#define NV_24256                    8  // 32KB I2C EEPROM AT DEFAULT ADDRESS 0x50
+#define NV_AT24C32                  9  // 4KB I2C EEPROM AT DEFAULT ADDRESS 0x57 (ZS042 module for instance)
+#define NV_MB85RC64                10  // 8KB I2C FRAM AT DEFAULT ADDRESS 0x50
+#define NV_MB85RC256               11  // 32KB I2C FRAM AT DEFAULT ADDRESS 0x50
 
 #define NVE_LOW                     0   // low (< 100K writes)
 #define NVE_MID                     1   // mid (~ 100K writes)
@@ -149,6 +167,9 @@
 #define SIDEREAL_RATIO_F            1.0027379F
 #define SIDEREAL_PERIOD             15956313.06126534L
 #define SIDEREAL_RATE_HZ            60.16427456104770L
+#define SOLAR_RATE_HZ               60.0L
+#define LUNAR_RATE_HZ               57.9L
+#define KING_RATE_HZ                60.136L
 #define Deg10                       0.174532925199432L
 #define Deg20                       0.349065850398865L
 #define Deg45                       0.785398163397448L

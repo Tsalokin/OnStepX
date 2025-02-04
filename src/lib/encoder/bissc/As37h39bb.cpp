@@ -5,7 +5,6 @@
 #ifdef HAS_AS37_H39B_B
 
 // initialize BiSS-C encoder
-// nvAddress holds settings for the 9 supported axes, 9*4 = 72 bytes; set nvAddress 0 to disable
 As37h39bb::As37h39bb(int16_t maPin, int16_t sloPin, int16_t axis) {
   if (axis < 1 || axis > 9) return;
 
@@ -35,7 +34,7 @@ IRAM_ATTR bool As37h39bb::readEnc(uint32_t &position) {
   #ifdef ESP32
     portMUX_TYPE bisscMutex = portMUX_INITIALIZER_UNLOCKED;
     taskENTER_CRITICAL(&bisscMutex);
-  #elif defined(__TEENSYDUINO__)
+  #else
     noInterrupts();
   #endif
 
@@ -122,7 +121,7 @@ IRAM_ATTR bool As37h39bb::readEnc(uint32_t &position) {
 
   #ifdef ESP32
     taskEXIT_CRITICAL(&bisscMutex);
-  #elif defined(__TEENSYDUINO__)
+  #else
     interrupts();
   #endif
 
@@ -144,11 +143,7 @@ IRAM_ATTR bool As37h39bb::readEnc(uint32_t &position) {
     if (!foundCds) { VF("WRN: Encoder AS37_H39B_B"); V(axis); VLF(", Cds bit invalid"); errors++; } else
     if (encErr) { VF("WRN: Encoder AS37_H39B_B"); V(axis); VLF(", Error bit set"); errors++; } else errors = 0;
   }
-
-  if (errors > 0) {
-    if (errors <= 2) warn = true; else error = true;
-    return false;
-  }
+  if (errors > 0) { error++; return false; }
 
   #if BISSC_SINGLE_TURN == ON
     // extend negative to 32 bits

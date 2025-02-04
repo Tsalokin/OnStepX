@@ -10,6 +10,10 @@
 
 enum Direction: uint8_t {DIR_NONE, DIR_FORWARD, DIR_REVERSE, DIR_BOTH};
 
+#ifndef STEP_WAVE_FORM
+#define STEP_WAVE_FORM SQUARE
+#endif
+
 class Motor {
   public:
     // sets up the motor identification
@@ -133,7 +137,7 @@ class Motor {
     virtual int32_t getEncoderCount() { return 0; }
 
     // set origin of absolute encoders
-    virtual void encoderSetOrigin(uint32_t origin) {}
+    virtual void encoderSetOrigin(uint32_t origin) { UNUSED(origin); }
 
     // monitor and respond to motor state as required
     virtual void poll() {}
@@ -155,7 +159,8 @@ class Motor {
     void enableBacklash();
 
     volatile uint8_t axisNumber = 0;           // axis number for this motor (1 to 9 in OnStepX)
-    char axisPrefix[16];                       // prefix for debug messages
+    char axisPrefix[24];                       // prefix for debug messages
+    char axisPrefixWarn[24];                   // additional prefix for debug messages
 
     volatile bool sync = true;                 // locks movement of axis target with timer rate
     bool limitsCheck = true;                   // enable/disable numeric range limits (doesn't apply to limit switches)

@@ -6,6 +6,7 @@
 #ifdef MOUNT_PRESENT
 
 #include "../../lib/tasks/OnTask.h"
+#include "../../lib/nv/Nv.h"
 
 #include "../Telescope.h"
 #include "coordinates/Transform.h"
@@ -19,6 +20,10 @@
 #include "site/Site.h"
 #include "st4/St4.h"
 #include "status/Status.h"
+
+#if MOUNT_COORDS_MEMORY == ON && NV_ENDURANCE < NVE_VHIGH
+  #error "Configuration (Config.h): Setting MOUNT_COORDS_MEMORY requires a NV storage device with very high write endurance (FRAM)"
+#endif
 
 inline void mountWrapper() { mount.poll(); }
 inline void autostartWrapper() { mount.autostartPostponed(); }
@@ -118,7 +123,7 @@ void Mount::begin() {
   #endif
 
   VF("MSG: Mount, start tracking monitor task (rate 1000ms priority 6)... ");
-  if (tasks.add(1000, 0, true, 6, mountWrapper, "MntTrk")) { VLF("success"); } else { VLF("FAILED!"); }
+  if (tasks.add(1000, 0, true, 6, mountWrapper, "MtTrack")) { VLF("success"); } else { VLF("FAILED!"); }
 
   update();
   autostart();
@@ -138,8 +143,8 @@ Coordinate Mount::getMountPosition(CoordReturn coordReturn) {
 
 // handle all autostart tasks
 void Mount::autostart() {
-  tasks.setDurationComplete(tasks.getHandleByName("mnt_as"));
-  tasks.add(500, 0, true, 7, autostartWrapper, "mnt_as");
+  tasks.setDurationComplete(tasks.getHandleByName("MtAuto"));
+  tasks.add(2000, 0, true, 7, autostartWrapper, "MtAuto");
 }
 
 void Mount::autostartPostponed() {
@@ -149,16 +154,15 @@ void Mount::autostartPostponed() {
   // stop this task if already completed
   static bool autoStartDone = false;
   if (autoStartDone) {
-    tasks.setDurationComplete(tasks.getHandleByName("mnt_as"));
+    tasks.setDurationComplete(tasks.getHandleByName("MtAuto"));
     return;
   }
 
   // handle the one case where this completes without the date/time available
   static bool autoTrackDone = false;
   if (!autoTrackDone && TRACK_AUTOSTART == ON && transform.isEquatorial() && park.state != PS_PARKED && !home.settings.automaticAtBoot) {
-    VLF("MSG: Mount, autostart tracking sidereal");
+    VLF("MSG: Mount, autostart tracking");
     tracking(true);
-    trackingRate = hzToSidereal(SIDEREAL_RATE_HZ);
     autoStartDone = true;
     return;
   }
@@ -199,9 +203,8 @@ void Mount::autostartPostponed() {
 
   // auto tracking
   if (!autoTrackDone && TRACK_AUTOSTART == ON) {
-    VLF("MSG: Mount, autostart tracking sidereal");
+    VLF("MSG: Mount, autostart tracking");
     tracking(true);
-    trackingRate = hzToSidereal(SIDEREAL_RATE_HZ);
   }
   autoTrackDone = true;
 
@@ -258,13 +261,15 @@ void Mount::update() {
 
     float f1 = 0, f2 = 0;
     if (!guide.activeAxis1() || guide.state == GU_PULSE_GUIDE) {
-      f1 = trackingRateAxis1 + guide.rateAxis1 + pec.rate;
-      axis1.setFrequencyBase(siderealToRadF(f1)*SIDEREAL_RATIO_F*site.getSiderealRatio());
+      f1 = trackingRateAxis1;
+      if (transform.mountType != ALTAZM && transform.mountType != ALTALT)  f1 += guide.rateAxis1 + pec.rate;
+      axis1.setSynchronizedFrequency(siderealToRadF(f1)*SIDEREAL_RATIO_F*site.getSiderealRatio());
     }
 
     if (!guide.activeAxis2() || guide.state == GU_PULSE_GUIDE) {
-      f2 = trackingRateAxis2 + guide.rateAxis2;
-      axis2.setFrequencyBase(siderealToRadF(f2)*SIDEREAL_RATIO_F*site.getSiderealRatio());
+      f2 = trackingRateAxis2;
+      if (transform.mountType != ALTAZM && transform.mountType != ALTALT)  f2 += guide.rateAxis2;
+      axis2.setSynchronizedFrequency(siderealToRadF(f2)*SIDEREAL_RATIO_F*site.getSiderealRatio());
     }
 
     f1 = fabs(f1);
@@ -274,7 +279,7 @@ void Mount::update() {
     if (f1 > 3.0F) statusFlashMs = SF_SLEWING; else statusFlashMs = 500.0F/f1;
   } else {
     statusFlashMs = SF_SLEWING;
-    axis2.setFrequencyBase(0.0F);
+    axis2.setSynchronizedFrequency(0.0F);
   }
 
   if (statusFlashMs != lastStatusFlashMs) {
@@ -285,6 +290,14 @@ void Mount::update() {
 }
 
 void Mount::poll() {
+
+  // stop any movement then disable on motor hardware fault
+  if (mount.motorFault()) {
+    if (goTo.state > GS_NONE) goTo.abort(); else
+    if (guide.state > GU_NONE) guide.abort(); else
+    if (axis1.isEnabled() || axis2.isEnabled()) enable(false);
+  }
+
   #ifdef HAL_NO_DOUBLE_PRECISION
     #define DiffRange  0.0087266463F         // 30 arc-minutes in radians
     #define DiffRange2 0.017453292F          // 60 arc-minutes in radians
@@ -297,9 +310,11 @@ void Mount::poll() {
   // keep track of where we are pointing
   #if MOUNT_COORDS_MEMORY == ON
     if (!goTo.absoluteEncodersPresent) {
+      nv.ignoreCache(true);
       nv.write(NV_MOUNT_LAST_POSITION, transform.mountType);
       nv.write(NV_MOUNT_LAST_POSITION + 1, (float)axis1.getInstrumentCoordinate());
       nv.write(NV_MOUNT_LAST_POSITION + 5, (float)axis2.getInstrumentCoordinate());
+      nv.ignoreCache(false);
     }
   #endif
 
@@ -363,6 +378,16 @@ void Mount::poll() {
   ahead.d += trackingRateOffsetRadsDec;
   behind.d -= trackingRateOffsetRadsDec;
 
+  // apply non-equatorial guide rate offset to equatorial coordinates
+  if (guide.state == GU_PULSE_GUIDE && (transform.mountType == ALTAZM || transform.mountType == ALTALT)) {
+    float trackingRateGuideRadsRA = siderealToRad(guide.rateAxis1)*timeInSeconds*2.0;
+    float trackingRateGuideRadsDec = siderealToRad(guide.rateAxis2)*timeInSeconds*2.0;
+    ahead.h += trackingRateGuideRadsRA;
+    behind.h -= trackingRateGuideRadsRA;
+    ahead.d += trackingRateGuideRadsDec;
+    behind.d -= trackingRateGuideRadsDec;
+  }
+
   // transfer to variables named appropriately for mount coordinates
   float aheadAxis1, aheadAxis2, behindAxis1, behindAxis2;
   if (transform.mountType == ALTAZM) {
@@ -414,11 +439,6 @@ void Mount::poll() {
 
   // override for both rates for special case near the aa1 axis of rotation
   if (transform.mountType == ALTALT && fabs(altitude2) > Deg90 - DegenerateRange) { trackingRateAxis1 = 0.0F; }
-
-  // stop any movement on motor hardware fault
-  if (mount.motorFault()) {
-    if (goTo.state > GS_NONE) goTo.abort(); else if (guide.state > GU_NONE) guide.abort();
-  }
 
   update();
 }

@@ -1,10 +1,11 @@
 // -----------------------------------------------------------------------------------
 // Time/Location source DS3231 RTC support
-// uses the default I2C port in most cases; though HAL_Wire can redirect to another port (as is done for the Teensy3.5/3.6)
+// uses the default I2C port in most cases; though HAL_WIRE can redirect to another port (as is done for the Teensy3.5/3.6)
 
 #include "DS3231.h"
 
-#if defined(TIME_LOCATION_SOURCE) && TIME_LOCATION_SOURCE == DS3231
+#if (defined(TIME_LOCATION_SOURCE) && TIME_LOCATION_SOURCE == DS3231) || \
+    (defined(TIME_LOCATION_SOURCE_FALLBACK) && TIME_LOCATION_SOURCE_FALLBACK == DS3231)
 
 #ifdef TLS_TIMELIB
   #include <TimeLib.h> // https://github.com/PaulStoffregen/Time/archive/master.zip
@@ -12,31 +13,31 @@
 
 #include <Wire.h>
 #include <RtcDS3231.h> // https://github.com/Makuna/Rtc/archive/master.zip
-RtcDS3231<TwoWire> rtcDS3231(HAL_Wire);
+RtcDS3231<TwoWire> rtcDS3231(HAL_WIRE);
 
 #include "../PPS.h"
 
 bool TlsDs3231::init() {
-  HAL_Wire.begin();
+  HAL_WIRE.begin();
   #ifdef HAL_WIRE_CLOCK
-    HAL_Wire.setClock(HAL_WIRE_CLOCK);
+    HAL_WIRE.setClock(HAL_WIRE_CLOCK);
   #endif
 
-  HAL_Wire.beginTransmission(0x68);
-  bool error = HAL_Wire.endTransmission() != 0;
+  HAL_WIRE.beginTransmission(0x68);
+  bool error = HAL_WIRE.endTransmission() != 0;
   if (!error) {
     rtcDS3231.Begin();
     #ifdef HAL_WIRE_CLOCK
-      HAL_Wire.setClock(HAL_WIRE_CLOCK);
+      HAL_WIRE.setClock(HAL_WIRE_CLOCK);
     #endif
 
     if (!rtcDS3231.GetIsRunning()) rtcDS3231.SetIsRunning(true);
 
     // see if the RTC is present
     if (rtcDS3231.GetIsRunning()) {
-      // frequency 0 (1Hz) on the SQW pin
-      rtcDS3231.SetSquareWavePin(DS3231SquareWavePin_ModeClock);
-      rtcDS3231.SetSquareWavePinClockFrequency(DS3231SquareWaveClock_1Hz);
+      #if TIME_LOCATION_SOURCE == DS3231
+        ppsEnable();
+      #endif
 
       #ifdef TLS_TIMELIB
         RtcDateTime now = rtcDS3231.GetDateTime();
@@ -47,10 +48,10 @@ bool TlsDs3231::init() {
     } else { DLF("WRN: tls.init(), DS3231 GetIsRunning() false"); }
   } else { DLF("WRN: tls.init(), DS3231 (I2C 0x68) not found"); }
   #ifdef HAL_WIRE_RESET_AFTER_CONNECT
-    HAL_Wire.end();
-    HAL_Wire.begin();
+    HAL_WIRE.end();
+    HAL_WIRE.begin();
     #ifdef HAL_WIRE_CLOCK
-      HAL_Wire.setClock(HAL_WIRE_CLOCK);
+      HAL_WIRE.setClock(HAL_WIRE_CLOCK);
     #endif
   #endif
   return ready;
@@ -106,6 +107,12 @@ bool TlsDs3231::get(JulianDate &ut1) {
   }
 
   return true;
+}
+
+void TlsDs3231::ppsEnable() {
+  // frequency 0 (1Hz) on the SQW pin
+  rtcDS3231.SetSquareWavePin(DS3231SquareWavePin_ModeClock);
+  rtcDS3231.SetSquareWavePinClockFrequency(DS3231SquareWaveClock_1Hz);
 }
 
 #endif

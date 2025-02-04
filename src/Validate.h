@@ -73,6 +73,10 @@
   #warning "Configuration (Config.h): Setting SERIAL_E_BAUD_DEFAULT unknown, use OFF, 9600, 19200, 38400, 57600, 115200, 230400, 460800, or 921600 (baud.)"
 #endif
 
+#if SERIAL_RADIO != OFF && SERIAL_RADIO != BLUETOOTH && SERIAL_RADIO != WIFI_ACCESS_POINT && SERIAL_RADIO != WIFI_STATION
+  #warning "Configuration (Config.h): Setting SERIAL_RADIO unknown, use OFF, BLUETOOTH, WIFI_ACCESS_POINT, or WIFI_STATION"
+#endif
+
 #if STATUS_LED != OFF && STATUS_LED != ON
   #error "Configuration (Config.h): Setting STATUS_LED unknown, use OFF or ON."
 #endif
@@ -328,10 +332,6 @@
   #error "Configuration (Config.h): Setting MOUNT_COORDS_MEMORY unknown, use ON or OFF"
 #endif
 
-#if MOUNT_COORDS_MEMORY == ON && NV_ENDURANCE < NVE_VHIGH
-  #error "Configuration (Config.h): Setting MOUNT_COORDS_MEMORY requires a NV storage device with very high write endurance (FRAM)"
-#endif
-
 #if MOUNT_ENABLE_IN_STANDBY != ON && MOUNT_ENABLE_IN_STANDBY != OFF
   #error "Configuration (Config.h): Setting MOUNT_ENABLE_IN_STANDBY unknown, use ON or OFF"
 #endif
@@ -343,6 +343,14 @@
 // TIME AND LOCATION
 #if TIME_LOCATION_SOURCE < TLS_FIRST && TIME_LOCATION_SOURCE > TLS_LAST
   #error "Configuration (Config.h): Setting TIME_LOCATION_SOURCE unknown, use OFF or valid TIME LOCATION SOURCE (from Constants.h)"
+#endif
+
+#if TIME_LOCATION_SOURCE_FALLBACK != OFF
+  #if (TIME_LOCATION_SOURCE_FALLBACK < TLS_FIRST && TIME_LOCATION_SOURCE_FALLBACK > TLS_LAST) || \
+      TIME_LOCATION_SOURCE_FALLBACK == GPS || TIME_LOCATION_SOURCE_FALLBACK == NTP || \
+      TIME_LOCATION_SOURCE_FALLBACK == TIME_LOCATION_SOURCE
+    #error "Configuration (Config.h): Setting TIME_LOCATION_SOURCE_FALLBACK unknown, use OFF or valid alternate TIME LOCATION SOURCE (except GPS or NTP, from Constants.h)"
+  #endif
 #endif
 
 #if (TIME_LOCATION_PPS_SENSE) != OFF && \
@@ -614,6 +622,10 @@
   #error "Configuration (Config.h): Setting AXIS4_LIMIT_MAX unknown, use value in the range AXIS4_LIMIT_MIN to 500 (mm.)"
 #endif
 
+#if AXIS4_HOME_DEFAULT != MINIMUM && AXIS4_HOME_DEFAULT != MIDDLE && AXIS4_HOME_DEFAULT != MAXIMUM && (AXIS4_HOME_DEFAULT < 0 || AXIS4_HOME_DEFAULT > 500000)
+  #error "Configuration (Config.h): Setting AXIS4_HOME_DEFAULT unknown, use MINIMUM (zero) or MIDDLE (half travel) or MAXIMUM (full travel) or the position in microns (0 to 500000.)"
+#endif 
+
 #if (AXIS4_SENSE_HOME) != OFF && (AXIS4_SENSE_HOME) < 0
   #error "Configuration (Config.h): Setting AXIS4_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
@@ -706,6 +718,10 @@
 #if AXIS5_LIMIT_MAX < AXIS5_LIMIT_MIN || AXIS5_LIMIT_MAX > 500
   #error "Configuration (Config.h): Setting AXIS5_LIMIT_MAX unknown, use value in the range AXIS5_LIMIT_MIN to 500 (mm.)"
 #endif
+
+#if AXIS5_HOME_DEFAULT != MINIMUM && AXIS5_HOME_DEFAULT != MIDDLE && AXIS5_HOME_DEFAULT != MAXIMUM && (AXIS5_HOME_DEFAULT < 0 || AXIS5_HOME_DEFAULT > 500000)
+  #error "Configuration (Config.h): Setting AXIS5_HOME_DEFAULT unknown, use MINIMUM (zero) or MIDDLE (half travel) or MAXIMUM (full travel) or the position in microns (0 to 500000.)"
+#endif 
 
 #if (AXIS5_SENSE_HOME) != OFF && (AXIS5_SENSE_HOME) < 0
   #error "Configuration (Config.h): Setting AXIS5_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
@@ -800,6 +816,10 @@
   #error "Configuration (Config.h): Setting AXIS6_LIMIT_MAX unknown, use value in the range AXIS6_LIMIT_MIN to 500 (mm.)"
 #endif
 
+#if AXIS6_HOME_DEFAULT != MINIMUM && AXIS6_HOME_DEFAULT != MIDDLE && AXIS6_HOME_DEFAULT != MAXIMUM && (AXIS6_HOME_DEFAULT < 0 || AXIS6_HOME_DEFAULT > 500000)
+  #error "Configuration (Config.h): Setting AXIS6_HOME_DEFAULT unknown, use MINIMUM (zero) or MIDDLE (half travel) or MAXIMUM (full travel) or the position in microns (0 to 500000.)"
+#endif 
+
 #if (AXIS6_SENSE_HOME) != OFF && (AXIS6_SENSE_HOME) < 0
   #error "Configuration (Config.h): Setting AXIS6_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
@@ -889,6 +909,10 @@
 #if AXIS7_LIMIT_MAX < AXIS7_LIMIT_MIN || AXIS7_LIMIT_MAX > 500
   #error "Configuration (Config.h): Setting AXIS7_LIMIT_MAX unknown, use value in the range AXIS7_LIMIT_MIN to 500 (mm.)"
 #endif
+
+#if AXIS7_HOME_DEFAULT != MINIMUM && AXIS7_HOME_DEFAULT != MIDDLE && AXIS7_HOME_DEFAULT != MAXIMUM && (AXIS7_HOME_DEFAULT < 0 || AXIS7_HOME_DEFAULT > 500000)
+  #error "Configuration (Config.h): Setting AXIS7_HOME_DEFAULT unknown, use MINIMUM (zero) or MIDDLE (half travel) or MAXIMUM (full travel) or the position in microns (0 to 500000.)"
+#endif 
 
 #if (AXIS7_SENSE_HOME) != OFF && (AXIS7_SENSE_HOME) < 0
   #error "Configuration (Config.h): Setting AXIS7_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
@@ -980,6 +1004,10 @@
   #error "Configuration (Config.h): Setting AXIS8_LIMIT_MAX unknown, use value in the range AXIS8_LIMIT_MIN to 500 (mm.)"
 #endif
 
+#if AXIS8_HOME_DEFAULT != MINIMUM && AXIS8_HOME_DEFAULT != MIDDLE && AXIS8_HOME_DEFAULT != MAXIMUM && (AXIS8_HOME_DEFAULT < 0 || AXIS8_HOME_DEFAULT > 500000)
+  #error "Configuration (Config.h): Setting AXIS8_HOME_DEFAULT unknown, use MINIMUM (zero) or MIDDLE (half travel) or MAXIMUM (full travel) or the position in microns (0 to 500000.)"
+#endif 
+
 #if (AXIS8_SENSE_HOME) != OFF && (AXIS8_SENSE_HOME) < 0
   #error "Configuration (Config.h): Setting AXIS8_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
@@ -1070,6 +1098,10 @@
   #error "Configuration (Config.h): Setting AXIS9_LIMIT_MAX unknown, use value in the range AXIS9_LIMIT_MIN to 500 (mm.)"
 #endif
 
+#if AXIS9_HOME_DEFAULT != MINIMUM && AXIS9_HOME_DEFAULT != MIDDLE && AXIS9_HOME_DEFAULT != MAXIMUM && (AXIS9_HOME_DEFAULT < 0 || AXIS9_HOME_DEFAULT > 500000)
+  #error "Configuration (Config.h): Setting AXIS9_HOME_DEFAULT unknown, use MINIMUM (zero) or MIDDLE (half travel) or MAXIMUM (full travel) or the position in microns (0 to 500000.)"
+#endif
+
 #if (AXIS9_SENSE_HOME) != OFF && (AXIS9_SENSE_HOME) < 0
   #error "Configuration (Config.h): Setting AXIS9_SENSE_HOME unknown, use OFF or HIGH/LOW and HYST() and/or THLD() as described in comments."
 #endif
@@ -1143,26 +1175,81 @@
 #if FEATURE1_PURPOSE != OFF && (FEATURE1_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE1_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE1_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
 #endif
+#if FEATURE1_VALUE_DEFAULT != OFF && FEATURE1_VALUE_DEFAULT != ON && (FEATURE1_VALUE_DEFAULT < 0 || FEATURE1_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE1_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE1_VALUE_MEMORY != OFF && FEATURE1_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE1_VALUE_MEMORY unknown, use OFF or ON"
+#endif
+
 #if FEATURE2_PURPOSE != OFF && (FEATURE2_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE2_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE2_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
 #endif
+#if FEATURE2_VALUE_DEFAULT != OFF && FEATURE2_VALUE_DEFAULT != ON && (FEATURE2_VALUE_DEFAULT < 0 || FEATURE2_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE2_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE2_VALUE_MEMORY != OFF && FEATURE2_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE2_VALUE_MEMORY unknown, use OFF or ON"
+#endif
+
 #if FEATURE3_PURPOSE != OFF && (FEATURE3_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE3_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE3_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
 #endif
+#if FEATURE3_VALUE_DEFAULT != OFF && FEATURE3_VALUE_DEFAULT != ON && (FEATURE3_VALUE_DEFAULT < 0 || FEATURE3_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE3_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE3_VALUE_MEMORY != OFF && FEATURE3_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE3_VALUE_MEMORY unknown, use OFF or ON"
+#endif
+
 #if FEATURE4_PURPOSE != OFF && (FEATURE4_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE4_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE4_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
 #endif
+#if FEATURE4_VALUE_DEFAULT != OFF && FEATURE4_VALUE_DEFAULT != ON && (FEATURE4_VALUE_DEFAULT < 0 || FEATURE4_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE4_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE4_VALUE_MEMORY != OFF && FEATURE4_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE4_VALUE_MEMORY unknown, use OFF or ON"
+#endif
+
 #if FEATURE5_PURPOSE != OFF && (FEATURE5_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE5_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE5_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
 #endif
+#if FEATURE5_VALUE_DEFAULT != OFF && FEATURE5_VALUE_DEFAULT != ON && (FEATURE5_VALUE_DEFAULT < 0 || FEATURE5_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE5_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE5_VALUE_MEMORY != OFF && FEATURE5_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE5_VALUE_MEMORY unknown, use OFF or ON"
+#endif
+
 #if FEATURE6_PURPOSE != OFF && (FEATURE6_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE6_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE6_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
 #endif
+#if FEATURE6_VALUE_DEFAULT != OFF && FEATURE6_VALUE_DEFAULT != ON && (FEATURE6_VALUE_DEFAULT < 0 || FEATURE6_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE6_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE6_VALUE_MEMORY != OFF && FEATURE6_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE6_VALUE_MEMORY unknown, use OFF or ON"
+#endif
+
 #if FEATURE7_PURPOSE != OFF && (FEATURE7_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE7_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE7_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
 #endif
+#if FEATURE7_VALUE_DEFAULT != OFF && FEATURE7_VALUE_DEFAULT != ON && (FEATURE7_VALUE_DEFAULT < 0 || FEATURE7_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE7_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE7_VALUE_MEMORY != OFF && FEATURE7_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE7_VALUE_MEMORY unknown, use OFF or ON"
+#endif
+
 #if FEATURE8_PURPOSE != OFF && (FEATURE8_PURPOSE < AUX_FEATURE_PURPOSE_FIRST || FEATURE8_PURPOSE > AUX_FEATURE_PURPOSE_LAST)
   #error "Configuration (Config.h): Setting FEATURE8_PURPOSE unknown, use OFF or AUXILIARY FEATURE purpose (from Constants.h)"
+#endif
+#if FEATURE8_VALUE_DEFAULT != OFF && FEATURE8_VALUE_DEFAULT != ON && (FEATURE8_VALUE_DEFAULT < 0 || FEATURE8_VALUE_DEFAULT > 255)
+  #error "Configuration (Config.h): Setting FEATURE8_VALUE_DEFAULT unknown, use OFF or ON or a value 0 to 255"
+#endif
+#if FEATURE8_VALUE_MEMORY != OFF && FEATURE8_VALUE_MEMORY != ON
+  #error "Configuration (Config.h): Setting FEATURE8_VALUE_MEMORY unknown, use OFF or ON"
 #endif
 
 #if FEATURE1_TEMP != OFF && \

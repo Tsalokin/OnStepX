@@ -1,16 +1,13 @@
 // Broadcom AS37-H39B-B BISS-C encoders
 #pragma once
 
-#include "../Encoder.h"
+#include "Bissc.h"
 
 #ifdef HAS_AS37_H39B_B
 
-  #include "Bissc.h"
-
   class As37h39bb : public Bissc {
     public:
-      // initialize Bissc encoder
-      // nvAddress holds settings for the 9 supported axes, 9*4 = 72 bytes; set nvAddress 0 to disable
+      // initialize BiSS-C encoder
       As37h39bb(int16_t maPin, int16_t sloPin, int16_t axis);
 
     private:

@@ -6,6 +6,7 @@
 #ifdef MOUNT_PRESENT
 
 #include "../../../lib/tasks/OnTask.h"
+#include "../../../lib/nv/Nv.h"
 
 #include "../../../telescope/Telescope.h"
 #include "../Mount.h"
@@ -31,8 +32,8 @@ void Limits::init() {
   constrainMeridianLimits();
 
   // start limit monitor task
-  VF("MSG: Mount, limits start monitor task (rate 100ms priority 2)... ");
-  if (tasks.add(100, 0, true, 2, limitsWrapper, "MntLmt")) { VLF("success"); } else { VLF("FAILED!"); }
+  VF("MSG: Mount, start limits monitor task (rate 100ms priority 2)... ");
+  if (tasks.add(100, 0, true, 2, limitsWrapper, "MtLimit")) { VLF("success"); } else { VLF("FAILED!"); }
 }
 
 // constrain meridian limits to the allowed range
@@ -276,6 +277,13 @@ void Limits::poll() {
   LimitsError lastError = error;
 
   Coordinate current = mount.getMountPosition(CR_MOUNT_ALT);
+
+  #if TRACK_AUTOSTART == OFF && TRACK_WITHOUT_LIMITS == OFF
+    if (!limitsEnabled && mount.isTracking()) {
+      VLF("MSG: Mount, tracking without limits disallowed");
+      mount.tracking(false);
+    }
+  #endif
 
   if (limitsEnabled && guide.state != GU_HOME_GUIDE && guide.state != GU_HOME_GUIDE_ABORT) {
     // overhead and horizon limits

@@ -5,28 +5,14 @@
 
 #ifdef SERVO_MOTOR_PRESENT
 
-#include "../../../encoder/bissc/As37h39bb.h"
-#include "../../../encoder/bissc/Jtw24.h"
-#include "../../../encoder/bissc/Jtw26.h"
-#include "../../../encoder/cwCcw/CwCcw.h"
-#include "../../../encoder/pulseDir/PulseDir.h"
-#include "../../../encoder/pulseOnly/PulseOnly.h"
-#include "../../../encoder/virtualEnc/VirtualEnc.h"
-#include "../../../encoder/quadrature/Quadrature.h"
-#include "../../../encoder/quadratureEsp32/QuadratureEsp32.h"
-#include "../../../encoder/serialBridge/SerialBridge.h"
-
-#include "filters/Kalman.h"
-#include "filters/Learning.h"
-#include "filters/Rolling.h"
-#include "filters/Windowing.h"
+#include "../../../encoder/Encoder.h"
+#include "filter/Filter.h"
+#include "feedback/Feedback.h"
 
 #include "dc/Dc.h"
 #include "tmc2209/Tmc2209.h"
 #include "tmc5160/Tmc5160.h"
 #include "dcTmcSPI/DcTmcSPI.h"
-
-#include "feedback/Pid/Pid.h"
 
 #ifndef SERVO_SLEW_DIRECT
   #define SERVO_SLEW_DIRECT OFF
@@ -34,6 +20,10 @@
 
 #ifndef SERVO_SLEWING_TO_TRACKING_DELAY
   #define SERVO_SLEWING_TO_TRACKING_DELAY 3000 // in milliseconds
+#endif
+
+#ifndef SERVO_SAFETY_STALL_POWER
+  #define SERVO_SAFETY_STALL_POWER 33 // in percent
 #endif
 
 #ifdef ABSOLUTE_ENCODER_CALIBRATION
@@ -178,8 +168,6 @@ class ServoMotor : public Motor {
 
     Filter *filter;
 
-    char axisPrefixWarn[16];            // additional prefix for debug messages
-
     float velocityEstimate = 0.0F;
     float velocityOverride = 0.0F;
 
@@ -214,10 +202,12 @@ class ServoMotor : public Motor {
     bool slewing = false;
     bool motorStepsInitDone = false;
     bool homeSet = false;
+    uint32_t encoderOrigin = 0;
     bool encoderReverse = false;
     bool encoderReverseDefault = false;
     bool wasAbove33 = false;
     bool wasBelow33 = false;
+    bool safetyShutdown = false;
     long lastTargetDistance = 0;
 };
 

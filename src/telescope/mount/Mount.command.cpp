@@ -6,6 +6,7 @@
 #ifdef MOUNT_PRESENT
 
 #include "../../lib/tasks/OnTask.h"
+#include "../../lib/nv/Nv.h"
 
 #include "site/Site.h"
 #include "coordinates/Transform.h"
@@ -27,7 +28,10 @@ bool Mount::command(char *reply, char *command, char *parameter, bool *supressFr
       if (parameter[0] == 'H') precisionMode = PM_HIGHEST; else if (parameter[0] != 0) { *commandError = CE_PARAM_FORM; return true; }
       double a = getPosition(CR_MOUNT_ALT).a;
       #if AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
-        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) a = home.getPosition(CR_MOUNT_ALT).a;
+        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) {
+          Coordinate homePosition = home.getPosition(CR_MOUNT_ALT);
+          a = transform.mountToNative(&homePosition).a;
+        }
       #endif
       convert.doubleToDms(reply, radToDeg(a), false, true, precisionMode);
       *numericReply = false;
@@ -40,7 +44,10 @@ bool Mount::command(char *reply, char *command, char *parameter, bool *supressFr
       if (parameter[0] == 'H' || parameter[0] == 'e') precisionMode = PM_HIGHEST; else if (parameter[0] != 0) { *commandError = CE_PARAM_FORM; return true; }
       double d = getPosition().d;
       #if AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
-        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) d = home.getPosition().d;
+        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) {
+          Coordinate homePosition = home.getPosition();
+          d = transform.mountToNative(&homePosition).d;
+        }
       #endif
       convert.doubleToDms(reply, radToDeg(d), false, true, precisionMode);
       *numericReply = false;
@@ -53,7 +60,10 @@ bool Mount::command(char *reply, char *command, char *parameter, bool *supressFr
       if (parameter[0] == 'H' || parameter[0] == 'a') precisionMode = PM_HIGHEST; else if (parameter[0] != 0) { *commandError = CE_PARAM_FORM; return true; }
       double r = getPosition().r;
       #if AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
-        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) r = home.getPosition().r;
+        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) {
+          Coordinate homePosition = home.getPosition();
+          r = transform.mountToNative(&homePosition).r;
+        }
       #endif
       convert.doubleToHms(reply, radToHrs(r), false, precisionMode);
       *numericReply = false;
@@ -150,7 +160,10 @@ bool Mount::command(char *reply, char *command, char *parameter, bool *supressFr
       if (parameter[0] == 'H') precisionMode = PM_HIGHEST; else if (parameter[0] != 0) { *commandError = CE_PARAM_FORM; return true; }
       double z = getPosition(CR_MOUNT_HOR).z;
       #if AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
-        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) z = home.getPosition(CR_MOUNT_HOR).z;
+        if (guide.state == GU_HOME_GUIDE || guide.state == GU_HOME_GUIDE_ABORT) {
+          Coordinate homePosition = home.getPosition(CR_MOUNT_ALT);
+          z = transform.mountToNative(&homePosition).z;
+        }
       #endif
       convert.doubleToDms(reply, NormalizeAzimuth(radToDeg(z)), true, false, precisionMode);
       *numericReply = false;
@@ -414,23 +427,21 @@ bool Mount::command(char *reply, char *command, char *parameter, bool *supressFr
       if (settings.rc == RC_REFRACTION) settings.rc = RC_REFRACTION_DUAL; else
       if (settings.rc == RC_MODEL) settings.rc = RC_MODEL_DUAL;
     } else
-    if (command[1] == 'S') { settings.rc = RC_NONE; trackingRate = hzToSidereal(60.0F); } else
-    if (command[1] == 'K') { settings.rc = RC_NONE; trackingRate = hzToSidereal(60.136F); } else
-    if (command[1] == 'L') { settings.rc = RC_NONE; trackingRate = hzToSidereal(57.9F); } else
+    if (command[1] == 'S') { settings.rc = RC_NONE; trackingRate = hzToSidereal(SOLAR_RATE_HZ); } else
+    if (command[1] == 'K') { settings.rc = RC_NONE; trackingRate = hzToSidereal(KING_RATE_HZ); } else
+    if (command[1] == 'L') { settings.rc = RC_NONE; trackingRate = hzToSidereal(LUNAR_RATE_HZ); } else
     if (command[1] == 'Q') { trackingRate = hzToSidereal(SIDEREAL_RATE_HZ); } else
     if (command[1] == '+') { site.setSiderealPeriod(site.getSiderealPeriod() - hzToSubMicros(0.02F)); } else
     if (command[1] == '-') { site.setSiderealPeriod(site.getSiderealPeriod() + hzToSubMicros(0.02F)); } else
     if (command[1] == 'R') { site.setSiderealPeriod(SIDEREAL_PERIOD); } else
     if (command[1] == 'e') {
-      if (transform.isEquatorial() || site.isDateTimeReady()) {
-        #if GOTO_FEATURE == ON
-          if (park.state != PS_PARKED) tracking(true); else *commandError = CE_PARKED;
-        #else
-          tracking(true);
-        #endif
-      } else {
-        *commandError = CE_REPLY_UNKNOWN;
-      }
+      #if GOTO_FEATURE == ON
+        if (park.state != PS_PARKED) {
+      #endif
+      tracking(true);
+      #if GOTO_FEATURE == ON
+        } else *commandError = CE_PARKED;
+      #endif
     } else
     if (command[1] == 'd') {
       tracking(false);
