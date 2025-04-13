@@ -15,19 +15,16 @@
 #define PROFILER                    -11
 #define VERBOSE                     -12
 #define REMOTE                      -13
-#define ETHERNET_W5100              -14
-#define ETHERNET_W5500              -15
-#define WIFI                        -16
-#define WIFI_ACCESS_POINT           -17    // shorthand for easy WIFI mode settings
-#define WIFI_STATION                -18    // shorthand for easy WIFI mode settings
-#define BLUETOOTH                   -19    // shorthand for easy bluetooth mode settings
-#define SHARED                      -20
-#define STANDARD                    -21
-#define PERSISTENT                  -22
-#define ERRORS_ONLY                 -23
-#define MINIMUM                     -24
-#define MIDDLE                      -25
-#define MAXIMUM                     -26
+#define WIFI_ACCESS_POINT           -14    // shorthand for easy WIFI mode settings
+#define WIFI_STATION                -15    // shorthand for easy WIFI mode settings
+#define BLUETOOTH                   -16    // shorthand for easy bluetooth mode settings
+#define SHARED                      -17
+#define STANDARD                    -18
+#define PERSISTENT                  -19
+#define ERRORS_ONLY                 -20
+#define MINIMUM                     -21
+#define MIDDLE                      -22
+#define MAXIMUM                     -23
 #define INVALID                     -127
 
 // CAN interface options
@@ -38,6 +35,16 @@
 #define CAN1_TEENSY4                4
 #define CAN2_TEENSY4                5
 #define CAN3_TEENSY4                6
+
+// network interface options
+#define ETHERNET_FIRST              1
+#define ETHERNET_W5100              1
+#define ETHERNET_W5500              2
+#define ETHERNET_TEENSY41           3
+#define ETHERNET_LAST               3
+#define WIFI_FIRST                  4
+#define WIFI                        4
+#define WIFI_LAST                   4
 
 // driver (step/dir interface, usually for stepper motors)
 // changes here must be reflected in the StepDirDriver.cpp file, etc.
@@ -87,10 +94,10 @@
 #define SERVO_TMC5160               105    // TMC5160 stepper driver using VMAX velocity control
 #define SERVO_DRIVER_LAST           105
 
-// odrive driver
-#define ODRIVE_DRIVER_FIRST         200
+// integrated motor drivers
+#define MOTOR_DRIVER_FIRST          200
 #define ODRIVE                      200    // First generation ODrive (axis 1 and 2 only)
-#define ODRIVE_DRIVER_LAST          200
+#define MOTOR_DRIVER_LAST           200
 
 // servo encoder (must match Encoder library)
 #define ENC_FIRST                   1
@@ -103,8 +110,9 @@
 #define AS37_H39B_B                 7      // Broadcom AS37-H39B-B BISS-C interface encoder
 #define JTW_24BIT                   8      // JTW Trident BISS-C interface 24bit encoder
 #define JTW_26BIT                   9      // JTW Trident BISS-C interface 26bit encoder
-#define SERIAL_BRIDGE               10     // serial bridge to encoders
-#define ENC_LAST                    10
+#define LIKA_ASC85                  10     // Lika ASC85 BISS-C interface 25bit encoder (experimental)
+#define SERIAL_BRIDGE               11     // serial bridge to encoders
+#define ENC_LAST                    11
 
 // encoder filter types
 #define ENC_FILT_FIRST              1
