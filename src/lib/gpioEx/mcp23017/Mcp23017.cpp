@@ -9,8 +9,6 @@
   #define GPIO_MCP23017_I2C_ADDRESS 0x20
 #endif
 
-#include "../tasks/OnTask.h"
-
 // needs: https://github.com/adafruit/Adafruit-MCP23017-Arduino-Library and https://github.com/adafruit/Adafruit_BusIO
 #include "Adafruit_MCP23X17.h"
 Adafruit_MCP23X17 mcp;
@@ -27,9 +25,7 @@ bool GpioMcp23017::init() {
     found = false;
     DF("WRN: Gpio.init(), MCP23017 (I2C 0x"); if (DEBUG != OFF) SERIAL_DEBUG.print(GPIO_MCP23017_I2C_ADDRESS, HEX); DLF(") not found");
   }
-  #ifdef HAL_WIRE_CLOCK
-    HAL_WIRE.setClock(HAL_WIRE_CLOCK);
-  #endif
+  HAL_WIRE_SET_CLOCK();
 
   return found;
 }

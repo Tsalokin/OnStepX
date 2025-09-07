@@ -71,6 +71,10 @@
   #define PINMAP_STR "BTT SKR PRO v1.2"
   #include "Pins.SKR_PRO.h"
 #endif
+#if PINMAP == BTT_OCTOPUS_PRO
+  #define PINMAP_STR "BTT OCTOPUS PRO v1.1"
+  #include "Pins.OctopusPro.h"
+#endif
 #if PINMAP == JTWSTM
   #define PINMAP_STR "JTWSTM v2.1"
   #include "Pins.JTWPCB2.h"
@@ -82,6 +86,10 @@
 #if PINMAP == MaxSTM3 || PINMAP == MaxSTM3I
   #define PINMAP_STR "MaxSTM v3"
   #include "Pins.MaxSTM.h"
+#endif
+#if PINMAP == SAL_XB1
+  #define PINMAP_STR "SAL-XB1"
+  #include "Pins.SAL_XB1.h"
 #endif
 #ifndef PINMAP_STR
   #define PINMAP_STR "Unknown"

@@ -26,14 +26,11 @@
 
 // New symbol for the default I2C port -------------------------------------------------------------
 #include <Wire.h>
-#define HAL_WIRE Wire
+#ifndef HAL_WIRE
+  #define HAL_WIRE Wire
+#endif
 #ifndef HAL_WIRE_CLOCK
   #define HAL_WIRE_CLOCK 100000
-#endif
-#if (defined(I2C_SCL_PIN) && I2C_SCL_PIN != OFF) && (defined(I2C_SDA_PIN) && I2C_SDA_PIN != OFF)
-  #define WIRE_BEGIN() HAL_WIRE.begin(I2C_SDA_PIN, I2C_SCL_PIN); HAL_WIRE.setClock(HAL_WIRE_CLOCK);
-#else
-  #define WIRE_BEGIN() HAL_WIRE.begin(); HAL_WIRE.setClock(HAL_WIRE_CLOCK);
 #endif
 
 // Non-volatile storage ----------------------------------------------------------------------------
@@ -73,7 +70,6 @@
 #define HAL_INIT() { \
   analogReadResolution((int)log2(ANALOG_READ_RANGE + 1)); \
   SERIAL_BT_BEGIN(); \
-  WIRE_BEGIN(); \
 }
 
 //---------------------------------------------------------------------------------------------------
@@ -88,8 +84,12 @@
 #ifdef CONFIG_IDF_TARGET_ESP32C3
   // stand-in for delayNanoseconds(), assumes 80MHz clock
   #define delayNanoseconds(ns) { unsigned int c = ESP.getCycleCount() + ns/12.5F; do {} while ((int)(ESP.getCycleCount() - c) < 0); }
+  // current nanoseconds, rolls over about every 4.3 seconds
+  #define nanoseconds() ((unsigned long)((unsigned long long)(ESP.getCycleCount())*13))
 #else
   // stand-in for delayNanoseconds(), assumes 240MHz clock
   #include "xtensa/core-macros.h"
   #define delayNanoseconds(ns) { unsigned int c = xthal_get_ccount() + ns/4.166F; do {} while ((int)(xthal_get_ccount() - c) < 0); }
+  // current nanoseconds, rolls over about every 4.3 seconds
+  #define nanoseconds() ((unsigned long)((unsigned long long)(xthal_get_ccount())*4))
 #endif

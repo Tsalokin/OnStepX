@@ -9,10 +9,15 @@
 #include "filter/Filter.h"
 #include "feedback/Feedback.h"
 
+#ifdef CALIBRATE_SERVO_DC
+  #include "calibration/TrackingVelocity.h"
+#endif
+
 #include "dc/Dc.h"
 #include "tmc2209/Tmc2209.h"
 #include "tmc5160/Tmc5160.h"
 #include "dcTmcSPI/DcTmcSPI.h"
+#include "kTech/KTech.h"
 
 #ifndef SERVO_SLEW_DIRECT
   #define SERVO_SLEW_DIRECT OFF
@@ -24,6 +29,10 @@
 
 #ifndef SERVO_SAFETY_STALL_POWER
   #define SERVO_SAFETY_STALL_POWER 33 // in percent
+#endif
+
+#ifndef AXIS1_SERVO_VELOCITY_CALIBRATION
+  #define AXIS1_SERVO_VELOCITY_CALIBRATION 1
 #endif
 
 #ifdef ABSOLUTE_ENCODER_CALIBRATION
@@ -64,17 +73,17 @@ class ServoMotor : public Motor {
     // sets up the servo motor
     bool init();
 
-    // set motor reverse state
-    void setReverse(int8_t state);
-
     // get driver type code
     inline char getParameterTypeCode() { return feedback->getParameterTypeCode(); }
 
     // set motor parameters
-    void setParameters(float param1, float param2, float param3, float param4, float param5, float param6);
+    bool setParameters(float param1, float param2, float param3, float param4, float param5, float param6);
 
     // validate motor parameters
     bool validateParameters(float param1, float param2, float param3, float param4, float param5, float param6);
+
+    // set motor reverse state
+    void setReverse(int8_t state);
 
     // sets motor enable on/off (if possible)
     void enable(bool value);
@@ -82,7 +91,7 @@ class ServoMotor : public Motor {
     // get the associated motor driver status
     DriverStatus getDriverStatus();
 
-    // resets motor and target angular position in steps, also zeros backlash and index 
+    // resets motor and target angular position in steps, also zeros backlash and index
     void resetPositionSteps(long value);
 
     // get instrument coordinate, in steps
@@ -106,30 +115,30 @@ class ServoMotor : public Motor {
     // set slewing state (hint that we are about to slew or are done slewing)
     void setSlewing(bool state);
 
+    #ifdef ABSOLUTE_ENCODER_CALIBRATION
+      void calibrate(float value);
+    #endif
+
+    // calibrate the motor driver
+    void calibrateDriver() { if (ready) driver->calibrateDriver(); }
+
     // get encoder count
-    int32_t getEncoderCount() { return encoder->count; }
+    int32_t getEncoderCount() { if (ready) return encoder->count; else return 0; }
+
+    // set zero of absolute encoders
+    uint32_t encoderZero();
+
+    // set origin of absolute encoders
+    void encoderSetOrigin(uint32_t origin) { if (ready) encoder->setOrigin(origin); }
+
+    // read encoder
+    int32_t encoderRead();
 
     // updates PID and sets servo motor power/direction
     void poll();
 
     // sets dir as required and moves coord toward target at setFrequencySteps() rate
     void move();
-    
-  #ifdef ABSOLUTE_ENCODER_CALIBRATION
-    void calibrate(float value);
-  #endif
-
-    // calibrate the motor driver
-    void calibrateDriver() { driver->calibrateDriver(); }
-
-    // set zero of absolute encoders
-    uint32_t encoderZero();
-
-    // set origin of absolute encoders
-    void encoderSetOrigin(uint32_t origin) { encoder->setOrigin(origin); }
-
-    // read encoder
-    int32_t encoderRead();
 
     // servo motor driver
     ServoDriver *driver;
@@ -180,7 +189,7 @@ class ServoMotor : public Motor {
     volatile bool takeStep = false;     // should we take a step
     float trackingFrequency = 0;        // help figure out if equatorial mount is tracking
 
-    float currentFrequency = 0.0F;      // last frequency set 
+    float currentFrequency = 0.0F;      // last frequency set
     float lastFrequency = 0.0F;         // last frequency requested
     unsigned long lastPeriod = 0;       // last timer period (in sub-micros)
     long syncThreshold = OFF;           // sync threshold in counts (for absolute encoders) or OFF
@@ -197,6 +206,9 @@ class ServoMotor : public Motor {
 
     Feedback *feedback;
     ServoControl *control;
+    #ifdef CALIBRATE_SERVO_DC
+      ServoCalibrateTrackingVelocity *calibrateVelocity;
+    #endif
 
     bool useFastHardwareTimers = true;
     bool slewing = false;

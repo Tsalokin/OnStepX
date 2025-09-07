@@ -43,22 +43,24 @@ void Mount::init() {
 
   // get the main axes ready
   delay(100);
-  if (!axis1.init(&motor1)) { initError.driver = true; DLF("ERR: Axis1, no motion controller!"); }
-  axis1.setBacklash(settings.backlash.axis1);
-  axis1.setMotionLimitsCheck(false);
-  if (AXIS1_POWER_DOWN == ON) axis1.setPowerDownTime(AXIS1_POWER_DOWN_TIME);
-  #ifdef AXIS1_ENCODER_ORIGIN
-    if (AXIS1_ENCODER_ORIGIN == 0) axis1.motor->encoderSetOrigin(nv.readUL(NV_AXIS_ENCODER_ZERO_BASE));
-  #endif
+  if (!axis1.init(&motor1)) { initError.driver = true; DLF("ERR: Mount::init(), no motion controller for Axis1!"); } else {
+    axis1.setBacklash(settings.backlash.axis1);
+    axis1.setMotionLimitsCheck(false);
+    if (AXIS1_POWER_DOWN == ON) axis1.setPowerDownTime(AXIS1_POWER_DOWN_TIME);
+    #ifdef AXIS1_ENCODER_ORIGIN
+      if (AXIS1_ENCODER_ORIGIN == 0) axis1.motor->encoderSetOrigin(nv.readUL(NV_AXIS_ENCODER_ZERO_BASE));
+    #endif
+  }
 
   delay(100);
-  if (!axis2.init(&motor2)) { initError.driver = true; DLF("ERR: Axis2, no motion controller!"); }
-  axis2.setBacklash(settings.backlash.axis2);
-  axis2.setMotionLimitsCheck(false);
-  if (AXIS2_POWER_DOWN == ON) axis2.setPowerDownTime(AXIS2_POWER_DOWN_TIME);
-  #ifdef AXIS2_ENCODER_ORIGIN
-    if (AXIS2_ENCODER_ORIGIN == 0) axis2.motor->encoderSetOrigin(nv.readUL(NV_AXIS_ENCODER_ZERO_BASE + 4));
-  #endif
+  if (!axis2.init(&motor2)) { initError.driver = true; DLF("ERR: Mount::init(), no motion controller for Axis2!"); } else {
+    axis2.setBacklash(settings.backlash.axis2);
+    axis2.setMotionLimitsCheck(false);
+    if (AXIS2_POWER_DOWN == ON) axis2.setPowerDownTime(AXIS2_POWER_DOWN_TIME);
+    #ifdef AXIS2_ENCODER_ORIGIN
+      if (AXIS2_ENCODER_ORIGIN == 0) axis2.motor->encoderSetOrigin(nv.readUL(NV_AXIS_ENCODER_ZERO_BASE + 4));
+    #endif
+  }
 }
 
 void Mount::begin() {
@@ -177,7 +179,7 @@ void Mount::autostartPostponed() {
       VLF("MSG: Mount, autostart park restore");
       CommandError e = park.restore(TRACK_AUTOSTART == ON);
       if (e != CE_NONE) {
-        VF("WRN: Mount, autostart park restore failed with code "); VL(e);
+        DF("WRN: Mount, autostart park restore failed with code "); DL(e);
         autoStartDone = true;
         return;
       }
@@ -191,7 +193,7 @@ void Mount::autostartPostponed() {
     VLF("MSG: Mount, autostart home");
     CommandError e = home.request();
     if (e != CE_NONE) {
-      VF("WRN: Mount, autostart home request failed with code "); VL(e);
+      DF("WRN: Mount, autostart home request failed with code "); DL(e);
       autoStartDone = true;
       return;
     }

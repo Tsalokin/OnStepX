@@ -11,18 +11,15 @@
 StepDirGeneric::StepDirGeneric(uint8_t axisNumber, const StepDirDriverPins *Pins, const StepDirDriverSettings *Settings) {
   this->axisNumber = axisNumber;
 
-  strcpy(axisPrefix, "MSG: Axis_StepDirGeneric, ");
-  axisPrefix[9] = '0' + axisNumber;
-  strcpy(axisPrefixWarn, "WRN: Axis_StepDirGeneric, ");
-  axisPrefixWarn[9] = '0' + axisNumber;
+  strcpy(axisPrefix, " Axis_StepDirGeneric, ");
+  axisPrefix[5] = '0' + axisNumber;
 
   this->Pins = Pins;
   settings = *Settings;
 }
 
-// set up driver and parameters: microsteps, microsteps goto
-void StepDirGeneric::init(float param1, float param2, float param3, float param4, float param5, float param6) {
-  StepDirDriver::init(param1, param2, param3, param4, param5, param6);
+// setup driver
+bool StepDirGeneric::init() {
 
   m0Pin = Pins->m0;
   m1Pin = Pins->m1;
@@ -65,9 +62,10 @@ void StepDirGeneric::init(float param1, float param2, float param3, float param4
   pinModeEx(m2Pin, OUTPUT);
   digitalWriteEx(m2Pin, microstepBitCodeM2);
 
-  // automatically set fault status for known drivers
+  // get status detection ready
   status.active = settings.status != OFF;
 
+  // automatically set fault status for known drivers
   if (settings.status == ON) {
     switch (settings.model) {
       case DRV8825: settings.status = LOW; break;
@@ -84,10 +82,21 @@ void StepDirGeneric::init(float param1, float param2, float param3, float param4
     if (settings.status == HIGH) pinModeEx(Pins->fault, INPUT);
   #endif
 
+  // check to see if the driver is ok if possible
+  if (settings.status == LOW || settings.status == HIGH) {
+    status.fault = digitalReadEx(Pins->fault) == settings.status;
+    if (status.fault) {
+      DF("ERR:"); D(axisPrefix); DLF("motor driver device fault!");
+      return false;
+    } else { VF("MSG:"); V(axisPrefix); VLF("motor driver device ok"); }
+  }
+
   // set mode switching support flags
   // use low speed mode switch for TMC drivers or high speed otherwise
   modeSwitchAllowed = false;
   modeSwitchFastAllowed = microstepRatio != 1;
+
+  return true;
 }
 
 IRAM_ATTR void StepDirGeneric::modeMicrostepTracking() {
@@ -115,12 +124,6 @@ void StepDirGeneric::modeDecaySlewing() {
   if (settings.decaySlewing == OFF) return;
   int8_t state = getDecayPinState(settings.decaySlewing);
   if (state != OFF) digitalWriteEx(decayPin, state);
-}
-
-void StepDirGeneric::updateStatus() {
-  if (settings.status == LOW || settings.status == HIGH) {
-    status.fault = digitalReadEx(Pins->fault) == settings.status;
-  }
 }
 
 int8_t StepDirGeneric::getDecayPinState(int8_t decay) {

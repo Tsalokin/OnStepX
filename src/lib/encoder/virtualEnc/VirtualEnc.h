@@ -10,7 +10,7 @@
 class VirtualEnc : public Encoder {
   public:
     VirtualEnc(int16_t axis);
-    void init();
+    bool init();
 
     int32_t read();
     void write(int32_t count);
@@ -19,6 +19,8 @@ class VirtualEnc : public Encoder {
     void setDirection(volatile int8_t *direction);
 
   private:
+    int16_t axis_index;
+
     uint8_t virtualEncoderHandle = 0; 
     long countsPerSec = 0;
     long timerRateMs = 3000/HAL_FRACTIONAL_SEC; // (1.0/HAL_FRACTIONAL_SEC)*3*1000

@@ -16,8 +16,6 @@
 // CONTROLLER ======================================================================================================================
 #define HOST_NAME                "OnStep" // nStep", Hostname for this device up to 16 chars.                                 Adjust
 
-#define DRIVER_TMC_STEPPER
-
 // PINMAP ------------------------------------------------- see https://onstep.groups.io/g/main/wiki/Configuration_Controller#PINMAP
 #define PINMAP                        OFF //    OFF, Choose from: MiniPCB, MiniPCB2, MaxPCB4, MaxESP4, MaxSTM3, FYSETC_E4,   <-Req'd
                                           //         BTT_SKR_PRO, etc.  Other boards and more info. in ~/src/Constants.h
@@ -133,6 +131,9 @@
                                           //         ALTAZM      Altitude/Azimuth Mount, Dobsonians, etc.
                                           //         ALTAZM_UNL  ALTAZM w/unlimited Azimuth motion
 
+#define MOUNT_ALTERNATE_ORIENTATION   OFF //    OFF, ON Enables Meridian Flips for FORK mounts and passing through the        Option
+                                          //         Zenith for ALTAZM mounts.  GEM mode ignores this setting.
+                                          
 #define MOUNT_COORDS          TOPOCENTRIC // ...RIC, Applies refraction to coordinates to/from OnStep, except exactly         Infreq
                                           //              at the poles. Use TOPO_STRICT to apply refraction even in that case.
                                           //              Use OBSERVED_PLACE for no refraction.

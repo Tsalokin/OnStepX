@@ -14,30 +14,33 @@
 #define FYSETC_S6_2                 4      // FYSETC S6 Version 2.0, 3D printer board, a 6-axis design
 
 #define BTT_SKR_PRO                 5      // BigTreeTech SKR PRO Version 1.2
+#define BTT_OCTOPUS_PRO             6      // BigTreeTech Octopus Pro Version 1.1
 
-#define MiniPCB                     6      // small 2-axis design for embedded or mounting behind a panel, Teensy3.2
-#define MiniPCB13                   7      // improved version 1.3 adds better support for ESP-01 flashing and optional I2C
+#define MiniPCB                     7      // small 2-axis design for embedded or mounting behind a panel, Teensy3.2
+#define MiniPCB13                   8      // improved version 1.3 adds better support for ESP-01 flashing and optional I2C
 
-#define MiniPCB2                    8      // 2-axis design for small alum. case, Teensy3.2
+#define MiniPCB2                    9      // 2-axis design for small alum. case, Teensy3.2
 
-#define MaxPCB                      9      // first generation custom 4-axis board, Teensy3.5/Teensy3.6
-#define MaxPCB2                     10     // improved second generation for alum. case, Teensy3.5/Teensy3.6
-#define MaxPCB3                     11     // improved third generation for alum. case, Teensy4.1
-#define MaxPCB4                     12     // for Teensy4.1 w/TMC2209 support
-#define MaxSTM3                     13     // update to the MaxPCB3 using an Blackpill F411CE instead of the Teensy3.5/3.6
-#define MaxSTM3I                    14     // as above but using an onboard STM32F411CE with M24C64 EEPROM as default
+#define MaxPCB                      10     // first generation custom 4-axis board, Teensy3.5/Teensy3.6
+#define MaxPCB2                     11     // improved second generation for alum. case, Teensy3.5/Teensy3.6
+#define MaxPCB3                     12     // improved third generation for alum. case, Teensy4.1
+#define MaxPCB4                     13     // for Teensy4.1 w/TMC2209 support
+#define MaxSTM3                     14     // update to the MaxPCB3 using an Blackpill F411CE instead of the Teensy3.5/3.6
+#define MaxSTM3I                    15     // as above but using an onboard STM32F411CE with M24C64 EEPROM as default
 
-#define MaxESP3                     15     // adds 4th axis and option to flash the WeMos D1 Mini WiFi through OnStep
-#define MaxESP4                     16     // for ESP32S w/TMC2209 support
-#define CNC3                        17     // Arduino CNC Sheild on WeMos D1 R32 (ESP32)
-#define MicroScope                  18     // MicroScope PCB (ESP32, experimental and may be removed at any point!, USE AY YOUR OWN RISK!!!)
+#define MaxESP3                     16     // adds 4th axis and option to flash the WeMos D1 Mini WiFi through OnStep
+#define MaxESP4                     17     // for ESP32S w/TMC2209 support
+#define CNC3                        18     // Arduino CNC Sheild on WeMos D1 R32 (ESP32)
+#define MicroScope                  19     // MicroScope PCB (ESP32, experimental and may be removed at any point!, USE AY YOUR OWN RISK!!!)
 
-#define STM32Blue                   19     // Khalid and Dave's PCB for STM32 Blue pill (STM32F103CB and STM32F303CC)
+#define STM32Blue                   20     // Khalid and Dave's PCB for STM32 Blue pill (STM32F103CB and STM32F303CC)
 
-#define JTWSTM                      20     // JTW Astronomy JTWSTM telescope mount controller Rev 2.1
-#define MANTICORE                   21     // JTW Astronomy MANTICORE telescope mount controller Rev 1.0
+#define JTWSTM                      21     // JTW Astronomy JTWSTM telescope mount controller Rev 2.1
+#define MANTICORE                   22     // JTW Astronomy MANTICORE telescope mount controller Rev 1.0
 
-#define PINMAP_LAST                 21
+#define SAL_XB1                     23     // SAL-XB1 telescope mount controller
+
+#define PINMAP_LAST                 23
 
 // WEATHER sensors (temperature, pressure, and humidity)
 #define WEATHER_FIRST               1
@@ -131,7 +134,7 @@
 // --------------------------------------------------------------------------------------------------------------------------
 
 // task manager
-#define TASKS_MAX                   52     // up to 52 tasks
+#define TASKS_MAX                   60     // up to 60 tasks
 #define TASKS_SKIP_MISSED                  // just skip missed tasks if too late
 #ifdef ESP32
   #define TASKS_HWTIMERS             4     // up to 4 hardware timers
